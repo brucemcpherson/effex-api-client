@@ -26,6 +26,7 @@ efx.ping().then(function(result)  {
 
 ## The console and dahsboard
 To create reader and writer keys you'll need an an account (free). See the console to register and to take the API tutorial.
+https://storage.googleapis.com/effex-console-static/bundle/index.html#/
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
