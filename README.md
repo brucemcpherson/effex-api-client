@@ -119,7 +119,7 @@ Here is a list of the parameters that the API understands and where they can be 
 
 | Parameter | what it is for | can use in client |
 | ------------- | ---------------| ---------------|
-| data |	If GET is used (rather than POST), this parameter can be used to specify the data to be written | no |
+| data |	If GET is used (rather than POST), this parameter can be used to specify the data to be written | Not needed. It is generated automatically when required |
 | readers |	A comma separated list of reader keys that can read this item. | when creating an item | 
 | updaters	|A comma separated list of updater keys that can read or update this item. | when creating an item |
 | lifetime |	Lifetime in seconds of the data item, after which it will expire | when creating an item or alias |
