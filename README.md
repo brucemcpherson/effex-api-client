@@ -50,14 +50,14 @@ To be able to access an item, these things need to happen
 5. To register an alias, you need a writer key and a data item id. You can then register an alias to a key/item combination and that key can use the alias to access the item to which it has been assigned.
 
 ## Expiration and disabling
-Because this is a store for ephemeral data, everthing expires - accounts, data items, access keys and aliases - and their lifetime can each be individually set. Keys can last for months, but in the free version, data currently expires after a maximum of 12 hours although this may be revised as the service comes out of beta.
+Because this is a store for ephemeral data, everthing expires - accounts, data items, access keys and aliases - and their lifetime can each be individually set. Keys can last for months, but in the free version, data items expire after a maximum of 12 hours although this may be revised as the service comes out of beta.
 
 Lifetimes are set by explicit parameters, or inherited from the key used to create them.
 
 All access keys and items are associated with a specific account and will be immediately stop working if you disable or remove an account. You can create multiple accounts and manage them in the API console. You can stop a boss key being able to generate new keys by deleting it from the API console.
 
 ## Security
-This is a public store, and there is no authentication required. However, keys are required for all data accesses, and both the data and its keys are encrypted in the store. You may also choose to further encrypt it before sending it to the store too. In any case, to ensure you comply with your country's privacy laws on the storage of personally identiable data - dont' do it. 
+This is a public store, and there is no authentication required. However, keys are required for all data accesses, and both the data and its keys are encrypted in the store. You may also choose to further encrypt it before sending it to the store too. In any case, to ensure you comply with your country's privacy laws on the storage of personally identifiable data, don't do it. 
 
 # Node client
 The API has a simple HTTP REST API - take the tutorial to see the structure of each call if you want to write your own client. https://storage.googleapis.com/effex-console-static/bundle/index.html#/ .You can even use a browser to access the store if you want - handy for debugging. 
@@ -111,8 +111,19 @@ All responses from api requests are returned as promises.
 ## Methods
 There's an example of a request and response for each of the methods that access the API. This is not an exhaustive list, as it does not cover the administrative account management functions which are not currently available in the free tier.
 
-### parameters
-Many api calls take parameters. They all follow the same format. The data payload can be text or an object. Data sent as part of a POST payload or as a parameter is assigned to the data property when translated to the native API.
+### Parameters
+Many api calls take parameters. They all follow the same format. The data payload can be text or an object, and is specified as a argument to methods that can write or update data.
+
+Here is a list of the parameters that the API understands and where they can be used with this client. Params are always passed as a key/value pair object.
+| Parameter | what it is for | can use in client
+| ------------- |---------------|
+|data|	If GET is used (rather than POST), this parameter can be used to specify the data to be written | no |
+|readers|	A comma separated list of reader keys that can read this item. | when creating an item | 
+|updaters	|A comma separated list of updater keys that can read or update this item. | when creating an item |
+|lifetime|	Lifetime in seconds of the data item, after which it will expire | when creating an item or alias |
+|callback|	Provide a callback function name to request a JSONP response | all |
+|days| How many days an access key should live for | generating access keys |
+|seconds| As an alternative to days, how many seconds an access key should live for | generating access keys |
 
 ### setBase (url)
 
