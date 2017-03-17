@@ -115,8 +115,8 @@ There's an example of a request and response for each of the methods that access
 Many api calls take parameters. They all follow the same format. The data payload can be text or an object, and is specified as a argument to methods that can write or update data.
 
 Here is a list of the parameters that the API understands and where they can be used with this client. Params are always passed as a key/value pair object.
-| Parameter | what it is for | can use in client
-| ------------- |---------------|
+| Parameter | what it is for | can use in client|
+| ------------- |---------------|---------------|
 |data|	If GET is used (rather than POST), this parameter can be used to specify the data to be written | no |
 |readers|	A comma separated list of reader keys that can read this item. | when creating an item | 
 |updaters	|A comma separated list of updater keys that can read or update this item. | when creating an item |
