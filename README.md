@@ -117,13 +117,13 @@ Many api calls take parameters. They all follow the same format. The data payloa
 Here is a list of the parameters that the API understands and where they can be used with this client. Params are always passed as a key/value pair object.
 | Parameter | what it is for | can use in client|
 | ------------- |---------------|---------------|
-|data|	If GET is used (rather than POST), this parameter can be used to specify the data to be written | no |
-|readers|	A comma separated list of reader keys that can read this item. | when creating an item | 
-|updaters	|A comma separated list of updater keys that can read or update this item. | when creating an item |
-|lifetime|	Lifetime in seconds of the data item, after which it will expire | when creating an item or alias |
-|callback|	Provide a callback function name to request a JSONP response | all |
-|days| How many days an access key should live for | generating access keys |
-|seconds| As an alternative to days, how many seconds an access key should live for | generating access keys |
+| data |	If GET is used (rather than POST), this parameter can be used to specify the data to be written | no |
+| readers |	A comma separated list of reader keys that can read this item. | when creating an item | 
+| updaters	|A comma separated list of updater keys that can read or update this item. | when creating an item |
+| lifetime |	Lifetime in seconds of the data item, after which it will expire | when creating an item or alias |
+| callback |	Provide a callback function name to request a JSONP response | all |
+| days | How many days an access key should live for | generating access keys |
+| seconds | As an alternative to days, how many seconds an access key should live for | generating access keys |
 
 ### setBase (url)
 
