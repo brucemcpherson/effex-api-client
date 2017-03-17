@@ -47,10 +47,12 @@ To be able to access an item, these things need to happen
 2. An item can be read back, updated or removed using the writer key plus the item key.
 3. To assign read access to an item, you can specify a comma separated list of readers as a parameter when creating the item. Any reader keys mentioned in that list can read the item using the reader key plus the item key.
 4. To assign update access to an item, you can specify a comma separated list of updaters as a parameter when creating the item. Any updater keys mentioned in that list can read or update the item using the updater key plus the item key.
-5. To register an alias, you need a writer key and a data item id. You can then register an alias to a key/item combination and that key can use the alias to access the item that has been assigned that alias. This can be used to change the underlying data to a different item, without having to bother communicating the new item id  - so for example, a collaborating app could get by with only knowing a reader key plus a constant alias, even when the specific data item assigned to the alias is changed
+5. To register an alias, you need a writer key and a data item id. You can then register an alias to a key/item combination and that key can use the alias to access the item to which it has been assigned.
 
 ## Expiration and disabling
 Because this is a store for ephemeral data, everthing expires - accounts, data items, access keys and aliases - and their lifetime can each be individually set. Keys can last for months, but in the free version, data currently expires after a maximum of 12 hours although this may be revised as the service comes out of beta.
+
+Lifetimes are set by explicit parameters, or inherited from the key used to create them.
 
 All access keys and items are associated with a specific account and will be immediately stop working if you disable or remove an account. You can create multiple accounts and manage them in the API console. You can stop a boss key being able to generate new keys by deleting it from the API console.
 
@@ -75,7 +77,7 @@ efx.setBase("https://ephex-auth.appspot-preview.com");
 ## Responses
 Unless its a transport error, http responses will always be 200. If there is a structural error in your call, or for example, data is missing - this will be reported in the response. 
 
-A typical success response would be
+A typical response would consist of various properties describing the api access. In normal circumstances, the only one of interest is *response.data*, where a successful request would return something as shown below. The rest of the response can be used to find out more detail about the request and for troubleshooting any transport failures.
 
 ```
 { writer:"wxk-eb1-o1cbq17qfbre"
@@ -110,8 +112,7 @@ All responses from api requests are returned as promises.
 There's an example of a request and response for each of the methods that access the API. This is not an exhaustive list, as it does not cover the administrative account management functions which are not currently available in the free tier.
 
 ### parameters
-
-Many api calls take parameters. They all follow the same format
+Many api calls take parameters. They all follow the same format. The data payload can be text or an object. Data sent as part of a POST payload or as a parameter is assigned to the data property when translated to the native API.
 
 ### setBase (url)
 
@@ -119,6 +120,52 @@ Sets the API base url. Note that this is likely to change as the service moves f
 
 ```
 efx.setBase("https://ephex-auth.appspot-preview.com");
+```
+### ping ()
+
+Checks the service is up
+
+example
+```
+efx.ping ()
+.then (function (response) {
+  // do something with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/ping
+```
+example response
+```
+ok:true
+value:"PONG"
+code:200
+```
+### info ()
+
+Gets version info for service
+
+example
+```
+efx.info ()
+.then (function (response) {
+  // do something with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/info
+```
+example response
+```
+ok:true
+code:200
+▶info:{} 2 keys
+api:"effex-api"
+version:"1.01"
 ```
 
 ### generateKey (bosskey , type [,params])
@@ -129,7 +176,7 @@ example
 ```
 efx.generateKey ("bx1f7-e11-b731jbd5p1fo" , "writer", {count:1} )
 .then (function (response) {
-  // do something
+  // do something with response.data
 });
 
 ```
@@ -157,7 +204,7 @@ example
 ```
 efx.validateKey ("bx1f7-e11-b731jbd5p1fo")
 .then (function (response) {
-  // do something
+  // do something  with response.data
 });
 
 ```
@@ -176,8 +223,223 @@ plan:"x"
 accountId:"1f7"
 code:200
 ```
+### write (data , writer , method, params)
 
+Write data to the store and get an id back. The method can be post (preferred) or get (for small amounts of data where post is not possible - eg from browser). The params can be used to define which keys can read this item and its lifetime.
+
+example
+```
+efx.write (data , "wxk-eb1-i5ocq17bfbga")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/writer/wxk-eb1-i5ocq17bfbga
+```
+
+example response
+```
+writer:"wxk-eb1-i5ocq17bfbga"
+ok:true
+id:"dx1f7-k19-127mbaeiobft"
+plan:"x"
+accountId:"1f7"
+lifetime:3600
+size:175
+code:201
+```
+
+Here's an example with some reader and updater keys authorized. Note that the keys must be valid unexpired keys for the request to succeed.
+
+```
+efx.write (data , "wxk-eb1-v5oc917zfbfz" , "POST" , {
+  updaters:"uxk-f1z-b17ce5kcvoeb",
+  readers:"rxk-ec5-fc571rowbbf1"
+}).then (function (response) {
+  // do something
+});
+```
+translates to native api url
+
+```
+https://ephex-auth.appspot-preview.com/writer/wxk-eb1-v5oc917zfbfz?readers=rxk-ec5-fc571rowbbf1&updaters=uxk-f1z-b17ce5kcvoeb
+```
+example response
+
+```
+writer:"wxk-eb1-v5oc917zfbfz"
+ok:true
+id:"dx1f7-811-1576boei2bft"
+plan:"x"
+accountId:"1f7"
+▶readers:[] 1 item
+0:"rxk-ec5-fc571rowbbf1"
+▶updaters:[] 1 item
+0:"uxk-f1z-b17ce5kcvoeb"
+lifetime:3600
+size:211
+code:201
+```
+### read (id,  key , params)
+
+Read a data item from the store, where id is the id returned by a write operation (or an alias - see later), and key is any kind of key that has been authorized to read this item. Note that a writer key can always read, update or remove an item it has created.
+
+example
+```
+efx.read ("dx1f7-s18-167ibfeb9bfm", "rxk-ebb-fe971gtqbbt1")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/reader/rxk-ebb-fe971gtqbbt1/dx1f7-s18-167ibfeb9bfm
+```
+
+example response. The data payload will be in the value property.
+```
+reader:"rxk-ebb-fe971gtqbbt1"
+ok:true
+id:"dx1f7-s18-167ibfeb9bfm"
+accountId:"1f7"
+plan:"x"
+value:"a data item that can be read by another"
+code:200
+modified:1489752873661
+```
+
+### update (data, id, updater, method  , params)
+
+Update a data item in the store, where id is the id returned by a write operation (or an alias - see later), and key is any kind of key that has been authorized to update this item. Note that a writer key can always update an item it has created, and data is the new value to set for the given item id. As with write, it is possible (but not preferred), to use a GET method instead of the default POST.
+
+example
+```
+efx.update (data , "dx1f7-m12-167ibfev9bfh", "uxk-f1m-b17ce9uo_t9b")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/updater/uxk-f1m-b17ce9uo_t9b/dx1f7-m12-167ibfev9bfh
+```
+
+example response. 
+```
+updater:"uxk-f1m-b17ce9uo_t9b"
+ok:true
+id:"dx1f7-m12-167ibfev9bfh"
+plan:"x"
+accountId:"1f7"
+lifetime:3600
+modified:1489752873655
+size:196
+code:201
+```
+### remove (id, writer , params)
+
+It's not normally necessary to remove items, as they will expire anyway. Only the writer key that created an item can remove it.
+
+example
+
+```
+efx.remove ("dx1f7-s18-167ibfeb9bfm", "wxk-eb1-e9tbh177fbm9")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+
+```
+https://ephex-auth.appspot-preview.com/writer/wxk-eb1-e9tbh177fbm9/dx1f7-s18-167ibfeb9bfm
+```
+
+example response. 
+
+```
+writer:"wxk-eb1-e9tbh177fbm9"
+ok:true
+id:"dx1f7-s18-167ibfeb9bfm"
+accountId:"1f7"
+plan:"x"
+code:204
+```
+
+### registerAlias (writer, key, id, alias, params)
+
+It's possible to use an alias for a data item. This allows you to use a consistent reference to the same data abstaction even though the specific item it refers to changes. Like this, a collaborating app only needs a key that can reference that item along with the alias. 
+
+An alias doesn't apply to a data item - it refers to an access key/data item combination. Assigning the alias to this combination is done with register alias. Only the data item writer key can assign an alias.
+
+example
+
+```
+efx.registerAlias ("wxk-eb1-e9tbh177fbm9", "uxk-f1m-b17ce9uo_t9b","dx1f7-m12-167ibfev9bfh","some-awesome-data")
+.then (function (response) {
+  // do something  with response.data
+});
+```
+translates to native api url
+
+```
+https://ephex-auth.appspot-preview.com/wxk-eb1-e9tbh177fbm9/uxk-f1m-b17ce9uo_t9b/alias/some-awesome-data/dx1f7-m12-167ibfev9bfh
+```
+
+example response. 
+
+```
+type:"alias"
+plan:"x"
+lockValue:""
+ok:true
+validtill:"2017-03-17T14:14:31.992Z"
+key:"uxk-f1m-b17ce9uo_t9b"
+alias:"some-awesome-data"
+id:"dx1f7-m12-167ibfev9bfh"
+accountId:"1f7"
+writer:"wxk-eb1-e9tbh177fbm9"
+code:201
+```
+
+Once an alias has been established, it can be used anywhere a data id can be used. 
+
+example
+```
+efx.read ("some-awesome-data", "uxk-f1m-b17ce9uo_t9b")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+
+```
+https://ephex-auth.appspot-preview.com/reader/uxk-f1m-b17ce9uo_t9b/some-awesome-data
+```
+
+example response. 
+
+```
+reader:"uxk-f1m-b17ce9uo_t9b"
+ok:true
+id:"dx1f7-m12-167ibfev9bfh"
+accountId:"1f7"
+plan:"x"
+alias:"some-awesome-data"
+value:"a data item that can be updated by another"
+code:200
+modified:1489753261680
+```
 
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
+
+
+
