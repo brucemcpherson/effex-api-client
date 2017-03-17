@@ -115,6 +115,8 @@ There's an example of a request and response for each of the methods that access
 Many api calls take parameters. They all follow the same format. The data payload can be text or an object, and is specified as a argument to methods that can write or update data.
 
 Here is a list of the parameters that the API understands and where they can be used with this client. Params are always passed as a key/value pair object.
+
+
 | Parameter | what it is for | can use in client |
 | ------------- | ---------------| ---------------|
 | data |	If GET is used (rather than POST), this parameter can be used to specify the data to be written | no |
@@ -124,6 +126,8 @@ Here is a list of the parameters that the API understands and where they can be 
 | callback |	Provide a callback function name to request a JSONP response | all |
 | days | How many days an access key should live for | generating access keys |
 | seconds | As an alternative to days, how many seconds an access key should live for | generating access keys |
+
+
 
 ### setBase (url)
 
