@@ -4,10 +4,13 @@ var expect = require('chai').expect;
 var efx = require('../dist/index');
 
 // set up client 
-efx.setBase("https://ephex-auth.appspot-preview.com");
+//efx.setBase("https://ephex-auth.appspot-preview.com"); //prod
+
+efx.setBase("https://nodestuff-xlibersion.c9users.io");  //dev
 
 // boss key comes from console /// replace this with your own
-var bossKey = "bx2ao-1gl-bfe63jxaod29";
+///var bossKey = "bx2ao-1gl-bfe63jxaod29"; //prod
+var bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
 
 // service status tests
 describe('status', function() {
@@ -43,6 +46,7 @@ describe('status', function() {
 // Work with keys
 // we'll need these later
 var promises = {}, textData = "just some test data to write",alias ="somefunnyname", otherAlias = "anothername",
+  yetAlias = "yetanotheralias",
   someData = {
     name: 'xyz',
     a: [1, 2, 3],
@@ -293,12 +297,86 @@ describe('sharing items', function() {
 
 describe('working with aliases', function() {
 
+    it('writealias', function () {
+      return promises.keys
+        .then (function (keys) {
+          return promises.yetAlias = efx.writeAlias( someData, yetAlias, keys.writer, "post" , {
+            readers:keys.reader,updaters:keys.updater
+          } );
+      })
+      .then (function (result) {
+        var data = result.data;
+        expect(data).to.be.an('object');
+        expect(data.ok).to.equal(true);
+        expect(data.code).to.equal(201);
+        expect(data.id).to.be.a('string');
+        expect(data.lifetime).to.equal(3600);
+        expect(data.alias).to.equal(yetAlias);
+      });
+    });
+      
+    it('read writealias with writer', function() {
+      return Promise.all([promises.keys, promises.yetAlias])
+      .then(function(res) {
+        var keys = res[0];
+        // just read with a writer key
+        return efx.read(yetAlias, keys.writer);
+      })
+      .then(function(result) {
+        expect(someData).to.deep.equal(result.data.value);
+      });
+    });
+    
+    it('read writealias with reader', function() {
+      return Promise.all([promises.keys, promises.yetAlias])
+      .then(function(res) {
+        var keys = res[0];
+        return efx.read(yetAlias, keys.reader);
+      })
+      .then(function(result) {
+        expect(someData).to.deep.equal(result.data.value);
+      });
+    });
+    
+    it('read writealias with updater', function() {
+      return Promise.all([promises.keys, promises.yetAlias])
+      .then(function(res) {
+        var keys = res[0];
+        return efx.read(yetAlias, keys.updater);
+      })
+      .then(function(result) {
+        expect(someData).to.deep.equal(result.data.value);
+      });
+    });
+    
+     it('update writealias', function() {
+      return Promise.all([promises.keys, promises.yetAlias])
+        .then(function(res) {
+          return promises.yetUpdateItem = efx.update(textData, yetAlias);
+        })
+        .then(function(result) {
+          expect(result.data.ok).to.equal(true);
+        });
+    });
+
+    it('read writealias after update', function() {
+      return Promise.all([promises.keys, promises.yetUpdateItem])
+      .then(function(res) {
+        return efx.read(yetAlias);
+      })
+      .then(function(result) {
+        expect(textData).to.equal(result.data.value);
+      });
+    });
+
+
+
     it('registering', function() {
 
       return Promise.all([promises.keys,promises.updateItem]).then (function (res) {
         var keys = res[0];
         var data = res[1].data;
-        return promises.alias = efx.registerAlias( keys.writer, keys.reader, data.id, alias);
+      return promises.alias = efx.registerAlias( keys.writer, keys.reader, data.id, alias);
       })
       .then (function (result) {
         var data = result.data;
@@ -307,7 +385,7 @@ describe('working with aliases', function() {
         expect(data.code).to.equal(201);
         expect(data.id).to.be.a('string');
         expect(data.alias).to.equal(alias);
-        expect(new Date(data.validtill).getTime()).to.be.closeTo(1000 * 5 * 60 + new Date().getTime(), 10000);
+        expect(new Date(data.validtill).getTime()).to.be.closeTo(1000 * 5 * 60 + new Date().getTime(), 18000);
       });
     });
   

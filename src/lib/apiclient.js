@@ -134,6 +134,45 @@ var api = (function(ns) {
     }
 
   };
+  
+  /**
+   * write an item, with an alias
+   * @param {string} alias the alias to generate for the writer, plus any optional readers or updaters
+   * @param {string} writer the writer key
+   * @param {object} data what to write
+   * @param {string} method the to use (post,get)
+   * @param {object} params the params 
+   * @return {Promise} to the result
+   */
+  ns.writeAlias = function( data, alias, writer, method, params) {
+    method = method || "POST";
+    writer = writer || keys.writer;
+    method = method.toLowerCase();
+    params = params || {};
+
+    if (!alias) {
+      return Promise.reject("you need to provide an alias");
+    }
+    
+    var url = `/writer/${writer}/alias/${alias}${makeParams(params)}`;
+  
+    if (method === "get") {
+      params = {...params,
+        data: JSON.stringify(data)
+      };
+      return ax.get(url);
+    }
+    else if (method === "post") {
+      return ax.post(url, {
+        data: data
+      });
+    }
+    else {
+      return Promise.reject("invalid method:" + method);
+    }
+
+  };
+
 
   /**
    * @param {string} writer the writer key
