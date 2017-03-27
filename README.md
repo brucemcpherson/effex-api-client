@@ -451,6 +451,35 @@ value:"a data item that can be updated by another"
 code:200
 modified:1489753261680
 ```
+### writeAlias (data , alias , writer , method, params)
+
+This version of the write method allows you to create an alias at the same time as writing the item. The alias will be associated with the writer key. Any updaters or readers you specify in the params will also automatically have aliases for that item created for them at the same time.
+
+example
+```
+efx.writeAlias (data , "myalias", "wxk-eb1-i5ocq17bfbga")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/writer/wxk-eb1-i5ocq17bfbga/alias/myalias
+```
+
+example response
+```
+writer:"wxk-eb1-i5ocq17bfbga"
+ok:true
+id:"dx1f7-k19-127mbaeiobft"
+plan:"x"
+accountId:"1f7"
+lifetime:3600
+size:175
+code:201
+alias:"myalias"
+```
 
 
 ## More stuff
