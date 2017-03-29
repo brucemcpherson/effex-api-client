@@ -54,8 +54,9 @@ Before you can write to the store, you need a writer key. You need to generate w
 | reader | reading | data from the store      | with the API and a boss key |
 | item | needed to access a data item | by writing an item to the store with the API |
 | alias | can be used to assign a constant name to a data item | by assigning an alias to to a particular key/item combination using a writer key |
+| intent | authorization for a follow on action | by issuing a read with an intention parameter |
 
-Typically the account owner would keep the boss keys and writer keys private, and share item ,updater or reader keys with collaborators or collaborating applications.
+Typically the account owner would keep the boss keys and writer keys private, and share item ,updater or reader keys with collaborators or collaborating applications. Intent keys are an advanced topic, dealt with later in this documentation.
 
 To be able to access an item, these things need to happen
 1. A writer key is needed to write data to the store. An item key is generated. The same writer key can be used to write many items. 
@@ -132,7 +133,7 @@ Many api calls take parameters. They all follow the same format. The data payloa
 Here is a list of the parameters that the API understands and where they can be used with this client. Params are always passed as a key/value pair object.
 
 
-| Parameter | what it is for | can use in client |
+| Parameter | what it is for | when used in client |
 | ------------- | ---------------| ---------------|
 | data |	If GET is used (rather than POST), this parameter can be used to specify the data to be written | Not needed. It is generated automatically when required |
 | readers |	A comma separated list of reader keys that can read this item. | when creating an item | 
@@ -141,6 +142,9 @@ Here is a list of the parameters that the API understands and where they can be 
 | callback |	Provide a callback function name to request a JSONP response | all |
 | days | How many days an access key should live for | generating access keys |
 | seconds | As an alternative to days, how many seconds an access key should live for | generating access keys |
+| intention | To signal an intention for further operations, such as an update following a read | to lock updating for a time |
+| intent | An authorization key to proceed with a follow on operation | to fulfill a previous signalled intention |
+
 
 
 
