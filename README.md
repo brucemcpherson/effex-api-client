@@ -540,7 +540,7 @@ Read a data item from the store, where id is the id returned by a write operatio
 
 example
 ```
-efx.read ("dx1f7-s18-167ibfeb9bfm", "uxk-f1m-b17ce9uo_t9b", {intention:"update})
+efx.read ("dx1f7-s18-167ibfeb9bfm", "uxk-f1m-b17ce9uo_t9b", {intention:"update"})
 .then (function (response) {
   // do something  with response.data
 });
