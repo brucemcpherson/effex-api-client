@@ -4,13 +4,13 @@ var expect = require('chai').expect;
 var efx = require('../dist/index');
 
 // set up client 
-//efx.setBase("https://ephex-auth.appspot-preview.com"); //prod
+efx.setBase("https://ephex-auth.appspot-preview.com"); //prod
 
-efx.setBase("https://nodestuff-xlibersion.c9users.io");  //dev
+//efx.setBase("https://nodestuff-xlibersion.c9users.io");  //dev
 
 // boss key comes from console /// replace this with your own
-///var bossKey = "bx2ao-1gl-bfe63jxaod29"; //prod
-var bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
+var bossKey = "bx2ao-1zj-bf300lgaod2q"; //prod
+///var bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
 
 // service status tests
 describe('status', function() {
