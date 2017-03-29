@@ -595,6 +595,63 @@ size:196
 ```
 The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 409 along with an intentionExpires value.
 
+## Watching
+
+You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. You cannot subscribe directly with the REST API alone.
+
+### Lifetime
+
+A subscription can be set to have a lifetime after which it disappears. In any case it will disappear when the access key it belongs to expires.
+
+### Alias or id
+
+You can watch either a specific item, or  an alias. Alias subscription will follow changes in the alias assignment to new items, whereas a specific item subscription will only last as long as the item lasts. An alias subscription will last for as long as an alias is assigned to some item
+
+### Events
+
+You can choose which events to listen for from one or more of this list. Events are triggered strictly in the order they are detected.
+- update - if content is updated
+- remove - if item is removed
+- alias - if an alias is changed to another item
+- read - when an item is read
+- expire - when an item expires
+- unwatch - watch subscription was ended, or expired
+- error - something has gone wrong with the watching process
+
+#### Event object
+
+```
+type: update|remove|alias|read|expire|end|cancel|start
+timestamp: when the event happened
+message: any supplemental information such as an error message
+id:the id  of the item or alias being watched
+key:the key that is watching it
+watchKey: the watch key identifying the subscription
+```
+
+### Watch subscriptions
+
+This is done through the watch method, and cancelled with unwatch. Registration of event callbacks is with the onWatch method.
+
+### watch (id,  key )
+
+To actually receive events, you need to use onWatch passing the watchKey created here.
+- The id is the alias or item id to subscribe to (see previous comments on difference between subscribing to an id and an alias). 
+- The key is the reader, writer or updater key authorized to read the item 
+
+### unwatch (watchKey)
+
+This removes any previous watch using the watchKey. unwatch is automatically called when the watch subscription expires.
+- watchKey is the key created when the watch subscription was created
+
+### onWatch (watchKey , eventType , callback) 
+
+Registers a callback when an event of a given type is detected.
+
+- EventType is a string of any of the valid event types
+- watchKey is the key returned when the watch was created. 
+- callback is initiated when the event is detected and receives an event object as described earlier
+
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
