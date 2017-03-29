@@ -5,17 +5,33 @@ A cross platform cache, with a simple HTTP REST API that supports CORS
 
 ## Getting started
 
+### NPM
+
+For Node, or if you are developing using a package manager, install the client
 ```
 npm install effex-api-client --save
 ```
-
-See the tests module for a complete list of everything you can do
-
-to check if everything is working
-
+Then in your code
 ```
 var efx = require ('effex-api-client');
+```
 
+### SCRIPT tag
+
+If you are including the library with a script tag
+
+```
+<script src="https://storage.googleapis.com/xliberation.com/effex-api/effex-api-client-v1.0.min.js"></script>
+
+```
+Then in your code
+```
+var efx = EffexApiClient;
+```
+
+## To check you have connectivity
+
+```
 // set up client 
 efx.setBase("https://ephex-auth.appspot-preview.com");
 
