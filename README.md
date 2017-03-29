@@ -22,7 +22,6 @@ If you are including the library with a script tag
 
 ```
 <script src="https://storage.googleapis.com/xliberation.com/effex-api/effex-api-client-v1.0.min.js"></script>
-
 ```
 Then in your code
 ```
