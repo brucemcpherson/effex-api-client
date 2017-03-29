@@ -482,7 +482,7 @@ alias:"myalias"
 ```
 # Advanced topics
 
-These are experimental and may only be available to plan other than the free one.
+These are experimental and may only be available to plans other than the free one.
 
 ## Intentions
 
@@ -494,23 +494,23 @@ You can register the intention of doing further work on an item. For now the onl
 
 ### Identifying the intention
 
-There are a a few points about intentions worth remebering
+Using intentions can be tricky. Here a are a few important points.
 
 #### Intention key
 
-This key is created by the API, and returned when a read operation with an intention is requested. It must be returned to fulfill the intention. An intention key can be used only once after which it is removed.
+This key is created by the API, and returned when a read operation with an intention is requested. It must be returned to fulfill the intention. An intention key can be used only once.
 
 #### Access key
 
-An intention key is associated with a specific access key - the one that initiated the intention update request -, so you should use a writer or an updater key (that has been authorized to access the item) to read the item, and then follow it up with an update action using the same key. An intention request with a reader key will create an intention (to allow for future intention types), but will be assigned to the reader key. You then won't be able to update since yout updater key wil be different than the reader key that created the request in the first place. 
+An intention key is associated with a specific access key - the one that initiated the intention update request -, so you should use a writer or an updater key (that has been authorized to access the item) to read the item, and then follow it up with an update action using the same key. An intention request with a reader key will create an intention (to allow for future intention types), but will be assigned to the reader key. Therefore, the initial read request for an intention should always be made with the key that will eventually consume the intention request.
 
 #### Alias
 
-As usual, you can use an alias to read an item, and its underlying item id will be returned along with the data, and the generated intention key. Although you can follow up with an update request using the alias, you should instead use the returned natvive item id. This avoids the  situation where an alias has been reassigned to a different item in the meantime. This is an unlikely situation since an alias is associated with a specific access key, and there would need to be a registration of an alias with the same updater key and alias name in the time between your intention request and fullfillment - which is a stretch, but nevertheless possible.
+As usual, you can use an alias to read an item, and its underlying item id will be returned along with the data, and the generated intention key. Although you *can* follow up with an update request using the alias, you *should* instead use the returned native item id. This avoids the  situation where an alias has been reassigned to a different item in the meantime. This is an unlikely situation since an alias is associated with a specific access key, and there would need to be a registration of an alias with the same updater key and alias name in the time between your intention request and fullfillment - which is a stretch, but nevertheless possible.
 
 #### Update attempts while intention is active
 
-If an item has an active intention on it, and an attempt is made to update (or remove) it without specifiy matching intention or from another key, the request will be rejected. If you think this is likley to happen you should cater for it. A read response to an item that has an active intention on it, will include when the intention expires, so a good way to deal with it is to re-issue the request after that time.
+If an item has an active intention on it, and an attempt is made to update (or remove) it without specifiy matching intention or from another key, the request will be rejected. If you think this is likely to happen you should cater for it. A read response to an item that has an active intention on it, will include when the intention expires, so a good way to deal with it is to re-issue the request after that time.
 
 ### Intention parameter
 
@@ -518,7 +518,7 @@ An intention request is specified by a parameter in the read request.
 
 ### read (id,  key , {intention:"update"} )
 
-Read a data item from the store, where id is the id returned by a write operation (or an alias - see later), and key is any kind of key that has been authorized to read this item. Note that a writer key can always read, update or remove an item it has created, so in the case of an intention to update, the key should be an updater or writer.
+Read a data item from the store, where id is the id returned by a write operation (or an alias), and key is any kind of key that has been authorized to read this item. Note that a writer key can always read, update or remove an item it has created, so in the case of an intention to update, the key should be an updater or writer.
 
 example
 ```
@@ -530,7 +530,7 @@ efx.read ("dx1f7-s18-167ibfeb9bfm", "uxk-f1m-b17ce9uo_t9b")
 ```
 translates to native api url
 ```
-https://ephex-auth.appspot-preview.com/reader/rxk-ebb-fe971gtqbbt1/dx1f7-s18-167ibfeb9bfm?intention=update
+https://ephex-auth.appspot-preview.com/reader/uxk-f1m-b17ce9uo_t9b/dx1f7-s18-167ibfeb9bfm?intention=update
 ```
 
 example response. The data payload will be in the value property.
@@ -549,7 +549,7 @@ intentionExpires:1489752874589
 
 ### update (data, id, updater, method  , params)
 
-Update a data item in the store, where id is the id returned by a write operation (or an alias - see later), and key is any kind of key that has been authorized to update this item. Note that a writer key can always update an item it has created, and data is the new value to set for the given item id. As with write, it is possible (but not preferred), to use a GET method instead of the default POST. The intent parameter should be the intention key.
+Update a data item in the store, where id is the id returned by a write operation (or an alias), and key is any kind of key that has been authorized to update this item. Note that a writer key can always update an item it has created, and data is the new value to set for the given item id. As with write, it is possible (but not preferred), to use a GET method instead of the default POST. The intent parameter should be the intention key returned by the initial read request.
 
 example
 ```
@@ -575,8 +575,7 @@ lifetime:3600
 modified:1489752873655
 size:196
 ```
-If an update attempt that is prevented by an outstanding intention,  there will be a error message in the response, and code of 409 along with an intentionExpires value.
-
+The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 409 along with an intentionExpires value.
 
 
 ## More stuff
