@@ -480,6 +480,103 @@ size:175
 code:201
 alias:"myalias"
 ```
+# Advanced topics
+
+These are experimental and may only be available to plan other than the free one.
+
+## Intentions
+
+It's quite difficult to preserve atomicity in a rest API since by definition it is stateless. This means that if you read an item, and then want to update it, it's possible that the item has been modified or removed by someone else in the meantime. Because of the typical usage of the store, this is probably not a likely event, but still needs to be catered for. This is how the store deals with preserving atomicity
+
+### What are intentions
+
+You can register the intention of doing further work on an item. For now the only intention supported is update. The existence of an intention is short, and will expire after a short period of time (to be determined). While an item has an intention taken out on it, it is still readable, but cannot be updated or deleted by anyone else.
+
+### Identifying the intention
+
+There are a a few points about intentions worth remebering
+
+#### Intention key
+
+This key is created by the API, and returned when a read operation with an intention is requested. It must be returned to fulfill the intention. An intention key can be used only once after which it is removed.
+
+#### Access key
+
+An intention key is associated with a specific access key - the one that initiated the intention update request -, so you should use a writer or an updater key (that has been authorized to access the item) to read the item, and then follow it up with an update action using the same key. An intention request with a reader key will create an intention (to allow for future intention types), but will be assigned to the reader key. You then won't be able to update since yout updater key wil be different than the reader key that created the request in the first place. 
+
+#### Alias
+
+As usual, you can use an alias to read an item, and its underlying item id will be returned along with the data, and the generated intention key. Although you can follow up with an update request using the alias, you should instead use the returned natvive item id. This avoids the  situation where an alias has been reassigned to a different item in the meantime. This is an unlikely situation since an alias is associated with a specific access key, and there would need to be a registration of an alias with the same updater key and alias name in the time between your intention request and fullfillment - which is a stretch, but nevertheless possible.
+
+#### Update attempts while intention is active
+
+If an item has an active intention on it, and an attempt is made to update (or remove) it without specifiy matching intention or from another key, the request will be rejected. If you think this is likley to happen you should cater for it. A read response to an item that has an active intention on it, will include when the intention expires, so a good way to deal with it is to re-issue the request after that time.
+
+### Intention parameter
+
+An intention request is specified by a parameter in the read request.
+
+### read (id,  key , {intention:"update"} )
+
+Read a data item from the store, where id is the id returned by a write operation (or an alias - see later), and key is any kind of key that has been authorized to read this item. Note that a writer key can always read, update or remove an item it has created, so in the case of an intention to update, the key should be an updater or writer.
+
+example
+```
+efx.read ("dx1f7-s18-167ibfeb9bfm", "uxk-f1m-b17ce9uo_t9b")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/reader/rxk-ebb-fe971gtqbbt1/dx1f7-s18-167ibfeb9bfm?intention=update
+```
+
+example response. The data payload will be in the value property.
+```
+reader:"uxk-f1m-b17ce9uo_t9b"
+ok:true
+id:"dx1f7-s18-167ibfeb9bfm"
+accountId:"1f7"
+plan:"x"
+value:"a data item that can be read by another"
+code:200
+modified:1489752873661
+intent:"ix1f7-s23-fm123h9dhdo"
+intentionExpires:1489752874589
+```
+
+### update (data, id, updater, method  , params)
+
+Update a data item in the store, where id is the id returned by a write operation (or an alias - see later), and key is any kind of key that has been authorized to update this item. Note that a writer key can always update an item it has created, and data is the new value to set for the given item id. As with write, it is possible (but not preferred), to use a GET method instead of the default POST. The intent parameter should be the intention key.
+
+example
+```
+efx.update (data , "dx1f7-m12-167ibfev9bfh", "uxk-f1m-b17ce9uo_t9b","post",{intent:"ix1f7-s23-fm123h9dhdo"})
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url
+```
+https://ephex-auth.appspot-preview.com/updater/uxk-f1m-b17ce9uo_t9b/dx1f7-m12-167ibfev9bfh?intent=ix1f7-s23-fm123h9dhdo
+```
+
+example response. 
+```
+updater:"uxk-f1m-b17ce9uo_t9b"
+ok:true
+id:"dx1f7-m12-167ibfev9bfh"
+plan:"x"
+accountId:"1f7"
+lifetime:3600
+modified:1489752873655
+size:196
+```
+If an update attempt that is prevented by an outstanding intention,  there will be a error message in the response, and code of 409 along with an intentionExpires value.
+
 
 
 ## More stuff
