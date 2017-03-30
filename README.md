@@ -551,7 +551,7 @@ translates to native api url
 https://ephex-auth.appspot-preview.com/reader/uxk-f1m-b17ce9uo_t9b/dx1f7-s18-167ibfeb9bfm?intention=update
 ```
 
-example response. The data payload will be in the value property.
+example response. The data payload will be in the value property. The intentExpires property is how many seconds the intention will be in place for (from the time it was registered)
 ```
 reader:"uxk-f1m-b17ce9uo_t9b"
 ok:true
@@ -562,7 +562,7 @@ value:"a data item that can be read by another"
 code:200
 modified:1489752873661
 intent:"ix1f7-s23-fm123h9dhdo"
-intentionExpires:1489752874589
+intentExpires:10
 ```
 
 ### update (data, id, updater, method  , params)
@@ -593,7 +593,7 @@ lifetime:3600
 modified:1489752873655
 size:196
 ```
-The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 409 along with an intentionExpires value.
+The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 409 along with an intentExpires value, which will indicate the number of seconds from when the request was made until the current lock expires.
 
 ## Watching
 
