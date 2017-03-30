@@ -500,7 +500,7 @@ alias:"myalias"
 ```
 # Advanced topics
 
-These are experimental and may only be available to plans other than the free one.
+These are experimental, under development, and may only be available to plans other than the free one.
 
 ## Intentions
 
@@ -633,25 +633,30 @@ watchKey: the watch key identifying the subscription
 
 This is done through the watch method, and cancelled with unwatch. Registration of event callbacks is with the onWatch method.
 
-### watch (id,  key )
+### watch (id,  key , params)
 
 To actually receive events, you need to use onWatch passing the watchKey created here.
 - The id is the alias or item id to subscribe to (see previous comments on difference between subscribing to an id and an alias). 
 - The key is the reader, writer or updater key authorized to read the item 
+- params are used to modify the watch subscription behavior
 
 ### unwatch (watchKey)
 
 This removes any previous watch using the watchKey. unwatch is automatically called when the watch subscription expires.
 - watchKey is the key created when the watch subscription was created
 
-### onWatch (watchKey , eventType , callback) 
+### onWatch (watchKey , eventType , callback, params) 
 
 Registers a callback when an event of a given type is detected.
 
 - EventType is a string of any of the valid event types
 - watchKey is the key returned when the watch was created. 
 - callback is initiated when the event is detected and receives an event object as described earlier
+- used to modify the onWatch behavior
 
+## Push notification or pull
+
+By default the SDK will watch for changes in the selected item, but it is also possible to set up push notification. In this case a given URL will be called by the API with information about the event. Documentation to follow on this.
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
