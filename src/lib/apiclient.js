@@ -114,7 +114,7 @@ var api = (function(ns) {
   ns.update = function(data, id, updater, method  , params) {
     
     method = method || "post";
-    method = method.toLowerCase();
+    method = method.toLowerCase ? method.toLowerCase() : "";
     updater = updater || keys.updater;
     params = params || {};
 
@@ -147,7 +147,7 @@ var api = (function(ns) {
   ns.writeAlias = function( data, alias, writer, method, params) {
     method = method || "POST";
     writer = writer || keys.writer;
-    method = method.toLowerCase();
+    method = method.toLowerCase ? method.toLowerCase() : "";
     params = params || {};
 
     if (!alias) {
@@ -184,7 +184,7 @@ var api = (function(ns) {
   ns.write = function( data, writer, method, params) {
     method = method || "POST";
     writer = writer || keys.writer;
-    method = method.toLowerCase();
+    method = method.toLowerCase ? method.toLowerCase() : "";
     params = params || {};
 
     if (method === "get") {
