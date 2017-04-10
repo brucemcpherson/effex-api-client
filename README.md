@@ -601,37 +601,29 @@ You can subscribe to watch an item to listen for changes. A subscription is made
 
 ### Lifetime
 
-A subscription can be set to have a lifetime after which it disappears. In any case it will disappear when the access key it belongs to expires.
+A subscription can be set to have a lifetime after which it disappears. In any case it will disappear a period of time after the last time the item it was watching was last updated.
 
 ### Alias or id
 
-You can watch either a specific item, or  an alias. Alias subscription will follow changes in the alias assignment to new items, whereas a specific item subscription will only last as long as the item lasts. An alias subscription will last for as long as an alias is assigned to some item
+You can watch either a specific item, or  an alias. Alias subscription will follow changes in the alias assignment to new items, whereas a specific item subscription will only last as long as the item lasts. An alias subscription will last for as long as an alias is assigned to some item and there is some activity on the item.
 
 ### Events
 
-You can choose which events to listen for from one or more of this list. Events are triggered strictly in the order they are detected.
+You can choose which events to listen for from one or more of this list. Events are triggered strictly in the order they are detected, which may be a little after they actually occur
 - update - if content is updated
 - remove - if item is removed
-- alias - if an alias is changed to another item
-- read - when an item is read
 - expire - when an item expires
-- unwatch - watch subscription was ended, or expired
-- error - something has gone wrong with the watching process
+
 
 #### Event object
 
 ```
-type: update|remove|alias|read|expire|end|cancel|start
-timestamp: when the event happened
-message: any supplemental information such as an error message
-id:the id  of the item or alias being watched
-key:the key that is watching it
-watchKey: the watch key identifying the subscription
+todo
 ```
 
 ### Watch subscriptions
 
-This is done through the watch method, and cancelled with unwatch. Registration of event callbacks is with the onWatch method.
+The first step in subscribing to an object is to create a watchable. A newly created watchable will return a key which will be used to refer to it in future
 
 ### watch (id,  key , params)
 
@@ -645,18 +637,46 @@ To actually receive events, you need to use onWatch passing the watchKey created
 This removes any previous watch using the watchKey. unwatch is automatically called when the watch subscription expires.
 - watchKey is the key created when the watch subscription was created
 
-### onWatch (watchKey , eventType , callback, params) 
+### on (watchable , callback , options)
 
-Registers a callback when an event of a given type is detected.
+Because not all platforms can support all forms of communication, there are multiple ways of getting messages when a watchable has something to report. Both push and pull notifications are supported. These are the types that can be specified in the type property of the options parameter.
+- push uses socket.io to communicate with the server api, and your callback is invoked whenever a tracked event happens. This is the most transparent form of watching and should be used where your platform supports it.
+- pull schedules regular checks for updates with the server, and invokes your callback if an event is detected during a polling operation. The frequency property (number of seconds between checking) can be set in the options parameter. The client handles the scheduling of the polling, and polling calls do not count towards your quota.
+- url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the oprions parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the server, which will keep on doing that until you unwatch or the subscription expires
 
-- EventType is a string of any of the valid event types
-- watchKey is the key returned when the watch was created. 
-- callback is initiated when the event is detected and receives an event object as described earlier
-- used to modify the onWatch behavior
+#### on options
 
-## Push notification or pull
+#### callback structure
 
-By default the SDK will watch for changes in the selected item, but it is also possible to set up push notification. In this case a given URL will be called by the API with information about the event. Documentation to follow on this.
+Regardless of the type of event tracking selected, the package returned to the callback is similar and is described below
+
+#### session
+
+You may receive event notifications of changes you make in your own session, which may or may not be a useful thing to you. Every call you make to the API includes a session id - which is a unique id which lasts as long as your app is running. When you retrieve a record from the store, it will contain a session property. To avoid dealing with changes you've made yourself you can simply check the session id against the current session. 
+
+```
+efx.get (id)
+.then (function (result) {
+  if (result.data.session !== efx.getSession()) {
+     // It was a change made by some other session than this one ....
+  }
+});
+```
+
+You can also set a custom session id, if you want to check across multiple sessions, set them all like this
+```
+efx.setSession ("barney rubble");
+```
+All items you write will take your custom session id and all will be considered part of the same session
+
+```
+efx.get (id)
+.then (function (result) {
+  if (result.data.session !== efx.getSession()) {
+     // It was a change made by some other session than this one ....
+  }
+});
+```
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
