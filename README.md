@@ -614,7 +614,7 @@ The first step in subscribing to an object is to create a watchable. A newly cre
 
 ### watch (id,  key , params)
 
-To actually receive events, you need to use onWatch passing the watchKey created here.
+To actually receive events, you need to use .on passing the watchKey created here.
 - The id is the alias or item id to subscribe to (see previous comments on difference between subscribing to an id and an alias). 
 - The key is the reader, writer or updater key authorized to read the item 
 - params are used to modify the watch subscription behavior
@@ -632,7 +632,7 @@ Because not all platforms can support all forms of communication, there are mult
 - url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the oprions parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the server, which will keep on doing that until you unwatch or the subscription expires
 - manually. You can use the getWatch method to return a list of event timestamps for a given watchable at any time. 
 
-Here's some examples of watch notification subscriptons.
+Here's some examples of watch notification subscriptons. In this section I'm using es6 syntax for brevity.
 
 push
 
@@ -649,7 +649,7 @@ efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for 
 url. Note that I've used the message option to pass a key that the receiving url can use to read the item with.
 
 ```
-efx.on (watchableId , "https://mysite/mycallback", {type:"url", message:{updater:updaterKey});
+efx.on (watchableId , "https://mysite/mycallback", {type:"url", message:{updater:updaterKey}});
 ```
 
 
@@ -695,11 +695,11 @@ Here's a brief summary of that these things are
 - session - the session that initiated the watch
 - message - an optional message of any custom data you set up with the .on method
 
-Note that the contents of the item are not returned, just notification that was an event, along with the id (and maybe also the alias) of the item. To be able to read the item (or update it), the watching process will need a key authorized to do so. There are multiple ways to do this. 
+Note that the contents of the item are not returned, just notification that there was an event, along with the id (and maybe also the alias) of the item. To be able to read the item (or update it), the watching process will need a key authorized to do so. There are multiple ways to do this. 
 
 - If the process watching is the same one as the one that created the watch in the first place, then it will probably already have a suitable key available.
-- If a differnt process is being poked (probably with a url type watch), it may not have a suitable access key. In this case you may want to use the message option to send one over.
-- In a collborative workflow, keys will already have been shared with partner processes so they will use those.
+- If a different process is being poked (probably with a url type watch), it may not have a suitable access key. In this case you may want to use the message option to send one over.
+- In a collaborative workflow, keys will already have been shared with partner processes so they will use those.
 
 An example might be a JavaScript process which calls an Apps Script webapp's doPost method to update a spreadsheet in real time. It would also watch for changes that Apps Script made and do something with those changes too. 
 
@@ -725,6 +725,9 @@ itemPromise.then (result=>efx.watch (result.id , writerKey , "update"))
     }, 
     {type:"push")
  ));
+ 
+ // write some data -- apps script will get woken up
+ itemPromise.then (result=>efx.update(someData , result.id , result.writer));
 ```
 
 
