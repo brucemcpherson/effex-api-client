@@ -1,13 +1,13 @@
 {
   "name": "effex-api-client",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "JavaScript client for Ephemeral Exchange",
   "main": "./dist/index.js",
   "scripts": {
     "build": "babel src --out-dir dist && browserify ./dist/effex-api-client-cdn.js | uglifyjs > ./cdn/effex-api-client-v1.0.min.js",
     "prepublish": "npm run build",
     "test": "mocha",
-    "small":"babel detail/small.js -o detail/s.js"
+    "small": "babel detail/small.js -o detail/s.js"
   },
   "author": "Bruce Mcpherson <bruce@mcpher.com> (http://ramblings.mcpher.com)",
   "license": "MIT",
@@ -18,7 +18,8 @@
     "effex"
   ],
   "dependencies": {
-    "axios": "^0.15.3"
+    "axios": "^0.15.3",
+    "socket.io-client": "^1.7.3"
   },
   "repository": {
     "type": "git",
