@@ -4,16 +4,17 @@ var expect = require('chai').expect;
 var efx = require('../dist/index');
 
 // set up client 
-efx.setBase("https://ephex-auth.appspot-preview.com"); //prod
+//efx.setBase("https://ephex-auth.appspot-preview.com"); //prod
 
-//efx.setBase("https://nodestuff-xlibersion.c9users.io");  //dev
+efx.setBase("https://nodestuff-xlibersion.c9users.io"); //dev
 
 // boss key comes from console /// replace this with your own
-var bossKey = "bx2ao-1zj-bf300lgaod2q"; //prod
-//var bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
-
+//var bossKey = "bx2ao-1zj-bf300lgaod2q"; //prod
+var bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
+var keyTime = 30 * 60; //   30 minutes
 
 function testKeys(promises) {
+
 
   describe('keys', function() {
 
@@ -27,11 +28,23 @@ function testKeys(promises) {
         expect(result.data.ok).to.equal(true);
       });
     });
+    
+    // but there's a shortcut
+    it('make keys', function() {
 
-    // get 1 writer key expiringin in 5 minutes
+      return promises.makeKeys = efx.makeKeys(bossKey,{seconds:keyTime})
+      .then (function (keys){
+        expect(keys).to.be.an('object');
+        expect(keys).to.have.all.keys('updater', 'writer', 'reader');
+      });
+
+    });
+    
+
+    // get 1 writer key expiringin in 30 minutes
     it('generate writer key', function() {
       promises.writers = efx.generateKey(bossKey, "writer", {
-        seconds: 5 * 60
+        seconds: keyTime
       });
       return promises.writers.then(function(result) {
         var writers = result.data;
@@ -39,7 +52,7 @@ function testKeys(promises) {
         expect(writers.keys).to.be.instanceof(Array);
         expect(writers.keys.length).to.equal(1);
         expect(writers.ok).to.equal(true);
-        expect(new Date(writers.validtill).getTime()).to.be.closeTo(1000 * 5 * 60 + new Date().getTime(), 2000);
+        expect(new Date(writers.validtill).getTime()).to.be.closeTo(1000 * keyTime + new Date().getTime(), 2000);
 
       });
     });
@@ -47,7 +60,7 @@ function testKeys(promises) {
     // get 2 reader keys expiringin in 5 minutes
     it('generate reader keys', function() {
       promises.readers = efx.generateKey(bossKey, "reader", {
-        seconds: 5 * 60,
+        seconds: keyTime,
         count: 2
       });
       return promises.readers.then(function(result) {
@@ -56,7 +69,7 @@ function testKeys(promises) {
         expect(readers.keys).to.be.instanceof(Array);
         expect(readers.keys.length).to.equal(2);
         expect(readers.ok).to.equal(true);
-        expect(new Date(readers.validtill).getTime()).to.be.closeTo(1000 * 5 * 60 + new Date().getTime(), 2000);
+        expect(new Date(readers.validtill).getTime()).to.be.closeTo(1000 * keyTime + new Date().getTime(), 2000);
       });
     });
 
@@ -64,7 +77,7 @@ function testKeys(promises) {
 
     it('generate update key', function() {
       promises.updaters = efx.generateKey(bossKey, "updater", {
-        seconds: 5 * 60,
+        seconds: keyTime,
         count: 1
       });
       return promises.updaters.then(function(result) {
@@ -73,15 +86,18 @@ function testKeys(promises) {
         expect(updaters.keys).to.be.instanceof(Array);
         expect(updaters.keys.length).to.equal(1);
         expect(updaters.ok).to.equal(true);
-        expect(new Date(updaters.validtill).getTime()).to.be.closeTo(1000 * 5 * 60 + new Date().getTime(), 2000);
+        expect(new Date(updaters.validtill).getTime()).to.be.closeTo(1000 * keyTime + new Date().getTime(), 2000);
       });
 
     });
+    
+
+    
     it('should be keys', function() {
 
-      promises.keys = Promise.all([promises.writers, promises.readers, promises.updaters]).then(function(res) {
+      promises.keys = Promise.all([promises.writers, promises.readers, promises.updaters,promises.makeKeys]).then(function(res) {
         // set the keys up as default so we dont have to bother specifying them later
-
+        // this will replace all the keys made by makeKeys
         efx.setKeys({
           updater: res[2].data.keys[0],
           writer: res[0].data.keys[0],
@@ -95,12 +111,18 @@ function testKeys(promises) {
         expect(keys).to.have.all.keys('updater', 'writer', 'reader');
       });
     });
+    
+
+    
   });
+  
 
 }
 
 function tests() {
   // service status tests
+  var allowTime = 60000;
+
   describe('status', function() {
 
     //return expect(Promise.resolve({ foo: "bar" })).to.eventually.have.property("foo");
@@ -129,6 +151,7 @@ function tests() {
 
   });
 
+
   // Work with keys
   // we'll need these later
   var promises = {},
@@ -137,6 +160,12 @@ function tests() {
     otherAlias = "anothername",
     yetAlias = "yetanotheralias",
     otherTextData = "some other stuff",
+    evenMoreTextData = "even more",
+    watchAlias = "awatchalias",
+    watches = [],
+    aliasWatches = [],
+    aliasRemoves = [],
+    aliasExpires = [],
     someData = {
       name: 'xyz',
       a: [1, 2, 3],
@@ -144,13 +173,18 @@ function tests() {
     };
 
   testKeys(promises);
-  describe('items', function() {
+  
+  describe('watching initial', function() {
 
-    it('write post', function() {
+    it('write watched item', function() {
 
       return promises.keys
         .then(function(keys) {
-          return promises.writePost = efx.write(someData);
+          return promises.writeWatched = efx.write(someData, keys.writer, "post", {
+            updaters: keys.updater,
+            readers: keys.reader,
+            lifetime:100
+          });
         })
         .then(function(result) {
           var data = result.data;
@@ -158,7 +192,297 @@ function tests() {
           expect(data.ok).to.equal(true);
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
-          expect(data.lifetime).to.equal(3600);
+          expect(data.lifetime).to.equal(100);
+          expect(data.session).to.equal(efx.getSession());
+        });
+    });
+
+    it('write alias to watch', function() {
+      return promises.keys
+        .then(function(keys) {
+          return promises.watchAlias = efx.writeAlias(someData, watchAlias, keys.writer, "post", {
+            readers: keys.reader,
+            updaters: keys.updater
+          });
+        })
+        .then(function(result) {
+          var data = result.data;
+          expect(data).to.be.an('object');
+          expect(data.ok).to.equal(true);
+          expect(data.code).to.equal(201);
+          expect(data.id).to.be.a('string');
+          expect(data.lifetime).to.be.below(keyTime);
+          expect(data.alias).to.equal(watchAlias);
+        });
+    });
+
+    it('write alias to watch for expiring', function() {
+      return promises.keys
+        .then(function(keys) {
+          return promises.expireWriter = efx.write(someData, keys.writer, "post", {
+            readers: keys.reader,
+            updaters: keys.updater,
+            lifetime:15
+          });
+        })
+        .then(function(result) {
+          var data = result.data;
+          expect(data).to.be.an('object');
+          expect(data.ok).to.equal(true);
+          expect(data.code).to.equal(201);
+          expect(data.id).to.be.a('string');
+          expect(data.lifetime).to.equal(15);
+        });
+    });
+
+    it('register write alias to watch for expiring', function() {
+      return promises.expireWriter
+        .then(function(result) {
+          var data = result.data;
+          return promises.expireWriterRegister = efx.registerAlias(data.writer, data.readers[0], data.id, watchAlias, {
+            seconds: 10
+          });
+        })
+        .then(function(result) {
+          var data = result.data;
+          expect(data.ok).to.equal(true);
+        });
+    });
+
+    it('create an alias watch for updating', function() {
+      return Promise.all([promises.keys, promises.watchAlias])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.watchAliasForUpdate = efx.watch(data.alias, keys.updater, "update");
+        })
+        .then(function(result) {
+          expect(true).to.equal(result.data.ok);
+          expect(201).to.equal(result.data.code);
+        });
+    });
+    
+    it('create an alias push watch for updating', function() {
+      return Promise.all([promises.keys, promises.watchAlias])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.watchPushAliasForUpdate = efx.watch(data.alias, keys.updater, "update");
+        })
+        .then(function(result) {
+          expect(true).to.equal(result.data.ok);
+          expect(201).to.equal(result.data.code);
+        });
+    });
+
+    it('create an alias watch for removal', function() {
+      return Promise.all([promises.keys, promises.watchAlias])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.watchAliasForRemove = efx.watch(data.alias, keys.updater, "remove");
+        })
+        .then(function(result) {
+          expect(true).to.equal(result.data.ok);
+          expect(201).to.equal(result.data.code);
+        });
+    });
+
+    it('create an alias watch for expiring', function() {
+      return Promise.all([promises.keys, promises.expireWriterRegister])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.watchAliasForExpire = efx.watch(data.alias, keys.reader, "expire");
+        })
+        .then(function(result) {
+          expect(true).to.equal(result.data.ok);
+          expect(201).to.equal(result.data.code);
+        });
+    });
+
+    it('create a watch for updating', function() {
+      return Promise.all([promises.keys, promises.writeWatched])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.watchForUpdate = efx.watch(data.id, keys.updater, "update");
+        })
+        .then(function(result) {
+          expect(true).to.equal(result.data.ok);
+          expect(201).to.equal(result.data.code);
+        });
+    });
+
+    it('setting an on', function() {
+      return Promise.all([promises.keys, promises.watchForUpdate])
+        .then(function(res) {
+          var data = res[1].data;
+          return efx.on(data.watchable, function(id, pack) {
+            watches.push({
+              id: id,
+              value: pack
+            });
+            console.log("noted update", id);
+          }, {
+            frequency: 10
+          });
+        });
+    });
+
+    it('setting an alias update on', function() {
+      return Promise.all([promises.keys, promises.watchAliasForUpdate])
+        .then(function(res) {
+          var data = res[1].data;
+          return efx.on(data.watchable, function(id, pack) {
+            aliasWatches.push({
+              id: id,
+              value: pack
+            });
+            console.log("noted alias update", id);
+          }, {
+            frequency: 10
+          });
+        });
+    });
+
+    it('setting a push alias update on', function() {
+      return Promise.all([promises.keys, promises.watchPushAliasForUpdate])
+        .then(function(res) {
+          var data = res[1].data;
+          return efx.on(data.watchable, function(id, pack) {
+            aliasWatches.push({
+              id: id,
+              value: pack
+            });
+            console.log("noted push alias update", id);
+          }, {
+            type: 'push'
+          });
+        });
+    });
+    
+    it('setting an expire  on', function() {
+      return Promise.all([promises.keys, promises.watchAliasForExpire])
+        .then(function(res) {
+          var data = res[1].data;
+          return efx.on(data.watchable, function(id, pack) {
+            aliasExpires.push({
+              id: id,
+              value: pack
+            });
+            console.log("noted alias expiration", id);
+          }, {
+            frequency: 10
+          });
+        });
+    });
+
+    it('setting an alias on remove', function() {
+      return Promise.all([promises.keys, promises.watchAliasForRemove])
+        .then(function(res) {
+          var data = res[1].data;
+          return efx.on(data.watchable, function(id, pack) {
+            aliasRemoves.push({
+              id: id,
+              value: pack
+            });
+            console.log("noted alias remove", id);
+          }, {
+            frequency: 10
+          });
+        });
+    });
+
+    var since;
+    it('provoke an update', function() {
+      return Promise.all([promises.keys, promises.writeWatched])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          since = new Date();
+          // just read with a writer key
+          return promises.provokeUpdate = efx.update(evenMoreTextData, data.id, keys.updater);
+        })
+        .then(function(result) {
+          expect(true).to.equal(result.data.ok);
+          expect(201).to.equal(result.data.code);
+
+        });
+    });
+    
+    it('provoke an alias update', function() {
+      return Promise.all([promises.keys, promises.watchAlias])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.provokeAliasUpdate = efx.update(evenMoreTextData, data.alias, keys.updater);
+        })
+        .then(function(result) {
+          expect(result.data.ok).to.equal(true);
+          expect(result.data.code).to.equal(201);
+
+        });
+    });
+
+    it('read a watchable', function() {
+      return Promise.all([promises.keys, promises.watchForUpdate, promises.provokeUpdate])
+        .then(function(res) {
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.watchableRead = efx.getWatched(data.watchable);
+        })
+        .then(function(result) {
+          expect(result.data.ok).to.equal(true);
+          expect(result.data.code).to.equal(200);
+        });
+
+    });
+
+    it('read a watchable with since parameter', function() {
+      return Promise.all([promises.keys, promises.watchForUpdate, promises.provokeUpdate])
+        .then(function(res) {
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.watchableRead = efx.getWatched(data.watchable, {
+            since: since.getTime()
+          });
+        })
+        .then(function(result) {
+          expect(result.data.ok).to.equal(true);
+          expect(result.data.code).to.equal(200);
+          expect(result.data.value.length).to.equal(1);
+        });
+
+    });
+
+  });
+
+  describe('items', function() {
+
+    it('write post', function() {
+
+      return promises.keys
+        .then(function(keys) {
+          return promises.writePost = efx.write(someData, keys.writer, "post", {
+            updaters: keys.updater,
+            readers: keys.reader,
+            session: "fred flintstone"
+          });
+        })
+        .then(function(result) {
+          var data = result.data;
+          expect(data).to.be.an('object');
+          expect(data.ok).to.equal(true);
+          expect(data.code).to.equal(201);
+          expect(data.id).to.be.a('string');
+          expect(data.lifetime).to.be.below(keyTime);
         });
     });
 
@@ -171,7 +495,9 @@ function tests() {
           return efx.read(data.id, keys.writer);
         })
         .then(function(result) {
-          expect(someData).to.deep.equal(result.data.value);
+          var data = result.data;
+          expect(data.value).to.deep.equal(someData);
+          expect(data.session).to.equal("fred flintstone");
         });
     });
 
@@ -187,7 +513,7 @@ function tests() {
           expect(data.ok).to.equal(true);
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
-          expect(data.lifetime).to.equal(3600);
+          expect(data.lifetime).to.be.below(keyTime);
         });
     });
 
@@ -216,7 +542,7 @@ function tests() {
           expect(data.ok).to.equal(true);
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
-          expect(data.lifetime).to.equal(3600);
+          expect(data.lifetime).to.be.below(keyTime);
         });
     });
 
@@ -234,6 +560,8 @@ function tests() {
     });
 
   });
+
+
   describe('sharing items', function() {
 
     it('assigning updaters and readers', function() {
@@ -298,7 +626,24 @@ function tests() {
         });
     });
 
+    it('provoke annother update', function() {
+      return Promise.all([promises.keys, promises.writeWatched])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return promises.provokeUpdate = efx.update(textData, data.id, keys.updater);
+        })
+        .then(function(result) {
+          expect(true).to.equal(result.data.ok);
+          expect(201).to.equal(result.data.code);
+
+        });
+    });
+
+
   });
+
   describe('working with aliases', function() {
 
     it('writealias', function() {
@@ -315,7 +660,7 @@ function tests() {
           expect(data.ok).to.equal(true);
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
-          expect(data.lifetime).to.equal(3600);
+          expect(data.lifetime).to.be.below(keyTime);
           expect(data.alias).to.equal(yetAlias);
         });
     });
@@ -388,7 +733,7 @@ function tests() {
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
           expect(data.alias).to.equal(alias);
-          expect(new Date(data.validtill).getTime()).to.be.closeTo(1000 * 5 * 60 + new Date().getTime(), 18000);
+          expect(new Date(data.validtill).getTime()).to.be.closeTo(1000 * keyTime + new Date().getTime(), allowTime);
         });
     });
 
@@ -516,13 +861,50 @@ function tests() {
         });
     });
 
+
+    it('redo the watched alias', function() {
+      return promises.keys
+        .then(function(keys) {
+          return promises.redoWatchAlias = efx.writeAlias(textData, watchAlias, keys.writer, "post", {
+            readers: keys.reader,
+            updaters: keys.updater
+          });
+        })
+        .then(function(result) {
+          var data = result.data;
+          expect(data).to.be.an('object');
+          expect(data.ok).to.equal(true);
+          expect(data.code).to.equal(201);
+          expect(data.id).to.be.a('string');
+          expect(data.lifetime).to.be.below(keyTime);
+          expect(data.alias).to.equal(watchAlias);
+        });
+    });
+
+    it('remove the watched alias', function() {
+      return promises.keys
+        .then(function(keys) {
+          return efx.remove(watchAlias, keys.writer);
+        })
+        .then(function(result) {
+          var data = result.data;
+          expect(data).to.be.an('object');
+          expect(data.ok).to.equal(true);
+          expect(data.code).to.equal(204);
+        });
+    });
+
+
+
+
   });
+
   describe('intents', function() {
     it('write post', function() {
 
       return promises.keys
         .then(function(keys) {
-          return promises.writePost = efx.write(textData,keys.writer,"post", {
+          return promises.writePost = efx.write(textData, keys.writer, "post", {
             updaters: keys.updater,
             readers: keys.reader
           });
@@ -533,7 +915,7 @@ function tests() {
           expect(data.ok).to.equal(true);
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
-          expect(data.lifetime).to.equal(3600);
+          expect(data.lifetime).to.be.below(keyTime);
         });
     });
 
@@ -559,7 +941,7 @@ function tests() {
           var keys = res[0];
           var data = res[1].data;
           // just read with a writer key
-          return  efx.read(data.id, keys.updater);
+          return efx.read(data.id, keys.updater);
         })
         .then(function(result) {
           expect(true).to.equal(result.data.ok);
@@ -591,7 +973,7 @@ function tests() {
           var keys = res[0];
           var data = res[1].data;
           return promises.updateIntent = efx.update(otherTextData, data.id, keys.writer, "post", {
-            intent:data.intent
+            intent: data.intent
           });
         })
         .then(function(result) {
@@ -599,14 +981,14 @@ function tests() {
           expect(result.data.code).to.equal(409);
         });
     });
-    
+
     it('update intent - should fail - using an invalid intent', function() {
       return Promise.all([promises.keys, promises.intentRead])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
           return promises.updateIntent = efx.update(otherTextData, data.id, keys.updater, "post", {
-            intent:"nonesense"
+            intent: "nonesense"
           });
         })
         .then(function(result) {
@@ -614,7 +996,7 @@ function tests() {
           expect(result.data.code).to.equal(409);
         });
     });
-    
+
     it('update intent - should fail - using the same key, but no intent', function() {
       return Promise.all([promises.keys, promises.intentRead])
         .then(function(res) {
@@ -634,7 +1016,7 @@ function tests() {
           var keys = res[0];
           var data = res[1].data;
           return efx.update(someData, data.id, keys.updater, "post", {
-            intent:data.intent
+            intent: data.intent
           });
         })
         .then(function(result) {
@@ -649,7 +1031,7 @@ function tests() {
           var keys = res[0];
           var data = res[1].data;
           // just read with a writer key
-          return  efx.read(data.id, keys.reader);
+          return efx.read(data.id, keys.reader);
         })
         .then(function(result) {
           expect(true).to.equal(result.data.ok);
@@ -657,53 +1039,90 @@ function tests() {
         });
     });
 
-    
+
     it('read writealias with writer - and set intent', function() {
       return Promise.all([promises.keys, promises.yetAlias])
         .then(function(res) {
           var keys = res[0];
           // just read with a writer key
-          return promises.intentAlias = efx.read(yetAlias, keys.writer,{
-            intention:"update"
+          return promises.intentAlias = efx.read(yetAlias, keys.writer, {
+            intention: "update"
           });
         })
         .then(function(result) {
           expect(textData).to.equal(result.data.value);
         });
     });
-    
+
     it('update intent with alias - should succeed - using the same key plus intent', function() {
       return Promise.all([promises.keys, promises.intentAlias])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
           return promises.updateIntentAlias = efx.update(otherTextData, data.alias, keys.writer, "post", {
-            intent:data.intent
+            intent: data.intent
           });
         })
         .then(function(result) {
           expect(result.data.ok).to.equal(true);
         });
     });
-    
+
     it('update intent with alias - should fail - because intent is used up', function() {
       return Promise.all([promises.keys, promises.intentAlias])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
           return promises.updateIntentAlias = efx.update(otherTextData, data.alias, keys.writer, "post", {
-            intent:data.intent
+            intent: data.intent
           });
         })
         .then(function(result) {
           expect(result.data.ok).to.equal(false);
         });
     });
-   
+
 
 
   });
 
+  describe('checking watches', function() {
+
+    // wait till the last thing is finished
+    it('item watches', function() {
+
+      return promises.intentAlias
+        .then(function() {
+          expect(watches.length).to.equal(2);
+        });
+    });
+
+
+    // wait till the last thing is finished
+    it('alias watches', function() {
+
+      return promises.intentAlias
+        .then(function() {
+          expect(aliasWatches.length).to.equal(2);
+        });
+    });
+
+    it('remove watches', function() {
+
+      return promises.intentAlias
+        .then(function() {
+          expect(aliasRemoves.length).to.equal(1);
+        });
+    });
+
+    it('expire watches', function() {
+
+      return promises.intentAlias
+        .then(function() {
+          expect(aliasExpires.length).to.equal(1);
+        });
+    });
+
+  });
 }
 tests();
-
