@@ -601,6 +601,9 @@ The response to an update attempt that is prevented from completing by an outsta
 
 You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. It is possible to create a watch with the REST API, and then query it periodically to see if there have been any events recorded, but for optimum usage it's best to use the SDK for your platform.
 
+Note - that currently push types are not working on Google AppEngine .. secure websockets haven't yet been implemented on App Engine. I'm trying to figure out a workaround.
+
+
 ### Lifetime
 
 A subscription can be set to have a lifetime after which it disappears. In any case it will disappear a period of time after the last time the item it was watching was last updated.
@@ -932,9 +935,9 @@ I'll also feature any use cases or videos you'd like to share on my site.
 
 All backend components run in Docker Debian containers, so are easily transportable.
 
-Server - Node 
+Server - Node - App Engine
 
-Database - Redis
+Database - Redis - Compute engine
 
 Console app - React, Redux
 
