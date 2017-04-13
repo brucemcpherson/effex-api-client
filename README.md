@@ -502,7 +502,7 @@ alias:"myalias"
 ```
 # Advanced topics
 
-These are experimental, under development, and may only be available to plans other than the free one.
+These are experimental, under development (and may not be yet visible in the prod version), and may only be available to plans other than the free one in the future.
 
 ## Intentions
 
@@ -773,7 +773,7 @@ function writeToSheet (sheetName , data) {
   return fiddler;
 }
 ```
-To conitue the conversation, Apps Script could use the keys provided to write something back, and if the initiating app (or some other) were listening they'd get the reply that Apps Script had updated the data too. 
+To continue the conversation, Apps Script could use the keys provided to write something back, and if the initiating app (or some other) were listening they'd get the reply that Apps Script had updated the data too. 
 
 ### Events
 
@@ -931,8 +931,11 @@ I'll also feature any use cases or videos you'd like to share on my site.
 ### technology
 
 All backend components run in Docker Debian containers, so are easily transportable.
+
 Server - Node 
+
 Database - Redis
+
 Console app - React, Redux
 
 
