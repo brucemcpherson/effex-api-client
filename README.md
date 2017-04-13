@@ -1,9 +1,11 @@
 # effex-api-client
-Node api client for Ephemeral exchange
+Node/JavaScript api client for Ephemeral exchange
 
 A cross platform cache, with a simple HTTP REST API that supports CORS
 
 ## Getting started
+
+This documentation  is primarily for the JavaScript and Node clients, but will serve as the master for all platform SDKS. For convenience, there is a consolidated repo for the entire Effex ecosystem here https://github.com/brucemcpherson/effex.
 
 ### NPM
 
@@ -76,9 +78,9 @@ All access keys and items are associated with a specific account and will be imm
 This is a public store, and there is no authentication required. However, keys are required for all data accesses, and both the data and its keys are encrypted in the store. You may also choose to further encrypt it before sending it to the store too. In any case, to ensure you comply with your country's privacy laws on the storage of personally identifiable data, don't do it. 
 
 # Client API SDK for Node and JavaScript
-The API has a simple HTTP REST API - take the tutorial to see the structure of each call if you want to write your own client. The tutoral is part of the API console, which you can find at https://storage.googleapis.com/effex-console-static/bundle/index.html#/.  The console also has a JSON editor and viewer to allow you to directly access data in the store. You can even use a browser to access the store if you want - handy for debugging.
+The API has a simple HTTP REST API - take the tutorial to see the structure of each call if you want to write your own client.  The tutoral is part of the API console, which you can find at https://storage.googleapis.com/effex-console-static/bundle/index.html#/.  The console also has a JSON editor and viewer to allow you to directly access data in the store. You can even use a browser to access the store if you want - handy for debugging.
 
-For convenience this node/JavaScript client is available, and of course you can use it in a web app too. There are other platform clients available too.For details see the consolidated repo. https://github.com/brucemcpherson/effex
+For convenience this node/JavaScript client is available, and of course you can use it in a web app too. There are other platform clients available too. For details see the consolidated repo. https://github.com/brucemcpherson/effex
 
 ## Initialization 
 
@@ -500,7 +502,7 @@ alias:"myalias"
 ```
 # Advanced topics
 
-These are experimental, under development, and may only be available to plans other than the free one.
+These are experimental, under development (and may not be yet visible in the prod version), and may only be available to plans other than the free one in the future.
 
 ## Intentions
 
@@ -597,66 +599,346 @@ The response to an update attempt that is prevented from completing by an outsta
 
 ## Watching
 
-You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. You cannot subscribe directly with the REST API alone.
+You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. It is possible to create a watch with the REST API, and then query it periodically to see if there have been any events recorded, but for optimum usage it's best to use the SDK for your platform.
 
 ### Lifetime
 
-A subscription can be set to have a lifetime after which it disappears. In any case it will disappear when the access key it belongs to expires.
+A subscription can be set to have a lifetime after which it disappears. In any case it will disappear a period of time after the last time the item it was watching was last updated.
 
 ### Alias or id
 
-You can watch either a specific item, or  an alias. Alias subscription will follow changes in the alias assignment to new items, whereas a specific item subscription will only last as long as the item lasts. An alias subscription will last for as long as an alias is assigned to some item
+You can watch either a specific item, or  an alias. Alias subscription will follow changes in the alias assignment to new items, whereas a specific item subscription will only last as long as the item lasts. An alias subscription will last for as long as an alias is assigned to some item and there is some activity on the item.
 
-### Events
-
-You can choose which events to listen for from one or more of this list. Events are triggered strictly in the order they are detected.
-- update - if content is updated
-- remove - if item is removed
-- alias - if an alias is changed to another item
-- read - when an item is read
-- expire - when an item expires
-- unwatch - watch subscription was ended, or expired
-- error - something has gone wrong with the watching process
-
-#### Event object
-
-```
-type: update|remove|alias|read|expire|end|cancel|start
-timestamp: when the event happened
-message: any supplemental information such as an error message
-id:the id  of the item or alias being watched
-key:the key that is watching it
-watchKey: the watch key identifying the subscription
-```
 
 ### Watch subscriptions
 
-This is done through the watch method, and cancelled with unwatch. Registration of event callbacks is with the onWatch method.
+The first step in subscribing to an object is to create a watchable. A newly created watchable will return a key which will be used to refer to it in future
 
-### watch (id,  key , params)
+### watch (id,  key [, params])
 
-To actually receive events, you need to use onWatch passing the watchKey created here.
+To actually receive events, you need to use .on passing the watchKey created here.
 - The id is the alias or item id to subscribe to (see previous comments on difference between subscribing to an id and an alias). 
 - The key is the reader, writer or updater key authorized to read the item 
 - params are used to modify the watch subscription behavior
 
-### unwatch (watchKey)
 
-This removes any previous watch using the watchKey. unwatch is automatically called when the watch subscription expires.
+### on (watchable , callback , options)
+
+Because not all platforms can support all forms of communication, there are multiple ways of getting messages when a watchable has something to report. Both push and pull notifications are supported. These are the types that can be specified in the type property of the options parameter.
+- push uses socket.io to communicate with the server api, and your callback is invoked whenever a tracked event happens. This is the most transparent form of watching and should be used where your platform supports it.
+- pull schedules regular checks for updates with the server, and invokes your callback if an event is detected during a polling operation. The frequency property (number of seconds between checking) can be set in the options parameter. The client handles the scheduling of the polling, and polling calls do not count towards your quota.
+- url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the options parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the server, which will keep on doing that until you unwatch or the subscription expires
+- manually. You can use the getWatch method to return a list of event timestamps for a given watchable at any time. 
+
+Here's some examples of watch notification subscriptons. In this section I'm using es6 syntax for brevity.
+
+push
+
+```
+efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , {type:"push"});
+```
+
+pull 
+
+```
+efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , {type:"pull", frequency:10});
+```
+
+url. Note that I've used the message option to pass a key that the receiving url can use to read the item with.
+
+```
+efx.on (watchableId , "https://mysite/mycallback", {type:"url", message:{updater:updaterKey}});
+```
+
+#### on options
+
+Some options  passed to the on method are only applicable to certain types of subscription. Here's the full list
+
+
+| Option property | what it is for | potential values |
+| ------------- | ---------------| ---------------|
+| type |	specify the type of event notification | push, pull or url |
+| frequency |	tells a pull notification how often to poll | number of seconds between polls. Minimum  is 10 | 
+| start	| timestamp from when to start noticing events. 0 will return all events| now. Will be automatically updated on each callback to avoid repetition |
+| method |	for url push notification, the http method to use to callback on | default is POST |
+| message |	an arbitrary message to send in addition to the usual event data | any object or serializable value |
+
+### off (watchKey)
+
+This removes any previous watch using the watchKey. off is automatically called when the watch subscription expires.
 - watchKey is the key created when the watch subscription was created
 
-### onWatch (watchKey , eventType , callback, params) 
+### Subscribers to url watches
 
-Registers a callback when an event of a given type is detected.
+If you set up a url type subscription, then you pass control to the server to manage state and activity. This means that you can cause a different app (or apps) to be informed in the case of a change to data. An example of that could be a JavaScript app that synchs data with some Google Apps document. To do that, you'd publish an Apps Script webapp that knew what to do with data changes, and instruct the effex server to call its url in the event of a data change
 
-- EventType is a string of any of the valid event types
-- watchKey is the key returned when the watch was created. 
-- callback is initiated when the event is detected and receives an event object as described earlier
-- used to modify the onWatch behavior
+```
+efx.on (watchableId , "https://myappsscritpwebapp", {type:"url", method:"post" , message:{updater:updaterKey}});
+```
 
-## Push notification or pull
+Here's what an App Script webapp might look like. 
 
-By default the SDK will watch for changes in the selected item, but it is also possible to set up push notification. In this case a given URL will be called by the API with information about the event. Documentation to follow on this.
+```
+function doPost(e) {
+  
+  // get the params
+  var params = e.parameter || {};
+  var post = JSON.parse((e.postData || {}).contents);
+  
+  // expecting to find a key to access the thing, plus an id
+  var data = useData (post.id , post.message && post.message.updater );
+  
+  // send back the body as a response
+  var response = {
+    ok:data && data.ok,
+    code:data && data.code,
+    error:data && data.error
+  };
+  return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+}
+```
+It gets woken by a post operation with the info it needs to access the data that's changed in its post body, including the access key it should use (another approach would have been for it to already have exchanged fixed keys with the collaborator).
+
+It should return some kind of response meaningful to you, which will be logged in the watchlog (see later) for you to inspect. For standardization, I recommend that you include the 3 properties shown at least.
+
+Here's how Apps Script could consume the data in the store.
+
+```
+/**
+* @param {string} item the effex id
+* @param {string} updater the updater id
+* @return {object} the data
+*/
+function useData (item, updater) {
+  
+  var sheetName = "pushDemo";
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // access the item
+  if (updater && item) {
+
+    // set up a connection
+    var efx = cEffexApiClient.EffexApiClient.setDev();
+    
+    // read the data
+    var data  = efx.read (item , updater);
+    if (data.ok) {
+
+      // write to the sheet
+      writeToSheet (sheetName, data.value);
+
+    }
+    else {
+      console.log('received a notification on item, but failed to read it', JSON.stringify (data));
+    }
+  }
+  else {
+    console.log('received a notification but dont have a key');
+  }
+  return data;
+  
+}
+
+```
+And whatever your favorite method of writing to the sheet- not really relevant for the example, but for completeness
+```
+
+/**
+* @param {string} sheetName the sheet to write it to
+* @param {[object]} data the data to write to it
+* @return {object} a fiddler
+*/
+function writeToSheet (sheetName , data) {
+
+  // get a fiddler and assign the data
+  var fiddler = new cUseful.Fiddler()
+  .setData (data);
+  
+  // where its goinf
+  var outputRange = SpreadsheetApp
+  .getActiveSpreadsheet()
+  .getRange("A1");
+  
+  // clear the sheet
+  outputRange
+  .getSheet()
+  .clearContents()
+  
+  // write the thing to the sheet
+  fiddler
+  .getRange(outputRange)
+  .setValues(fiddler.createValues());
+  
+  // in case anyone needs it
+  return fiddler;
+}
+```
+To continue the conversation, Apps Script could use the keys provided to write something back, and if the initiating app (or some other) were listening they'd get the reply that Apps Script had updated the data too. 
+
+### Events
+
+You can choose which events to listen for from one or more of this list. Events are triggered strictly in the order they are detected, (which will be shortly after they actually occur).
+- update - if content is updated
+- remove - if item is removed
+- expire - when an item expires
+
+
+#### Event object
+
+The event object varies slightly depending on the type of watch subscribed to, but here is an example of what will be passed to the subscription callback.
+```
+{ id: 'dx2b6-ub6-2pdj67pbqe1p',
+  alias: '',
+  value: [ 1491921137589 ],
+  key: 'sx-zep-1278rp6ab6db',
+  event: 'update',
+  session: '1od1bdemos32',
+  message: { .... some optional message of your choice ... } }
+```
+Here's a brief summary of that these things are
+- id - The id of the item that has been updated, removed or expired.
+- alias - If an alias is being watched (rather than a specific id), it'll be here
+- value - An array of timestamps when the event occurred, starting just after the last time an event was reported. Typically there will be just one, but you can request a longer history, or if you are doing a pull subscription, several events may have occured between pollings.
+- key - the .watchable property of the watch item created by the .watch method
+- event - the type of event
+- session - the session that initiated the watch
+- message - an optional message of any custom data you set up with the .on method
+
+Note that the contents of the item are not returned, just notification that there was an event, along with the id (and maybe also the alias) of the item. To be able to read the item (or update it), the watching process will need a key authorized to do so. There are multiple ways to do this. 
+
+- If the process watching is the same one as the one that created the watch in the first place, then it will probably already have a suitable key available.
+- If a different process is being poked (probably with a url type watch), it may not have a suitable access key. In this case you may want to use the message option to send one over.
+- In a collaborative workflow, keys will already have been shared with partner processes so they will use those.
+
+An example might be a JavaScript process which calls an Apps Script webapp's doPost method to update a spreadsheet in real time. It would also watch for changes that Apps Script made and do something with those changes too. 
+
+It would go something like this (I'll assume the access keys already exist, and for simplicity I've ignored the usual error handling)
+
+```
+//create an item, maybe with nothing in it, and allow an updater key to update it
+var itemPromise = efx.write ({} , writerKey, {updaters:updaterKey} )
+
+//create a watch for apps script
+itemPromise.then (result=>efx.watch (result.id , writerKey , "update"))
+
+// start watching, but have it call apps script when something happens & let it know an updater key it can use to read it with
+.then (result=>efx.on (result.watchable , "https://myappsscriptwebapp", {type:"url",message:{updater:updaterKey}}));
+
+// also create a local watch to notice anything that apps script does too
+itemPromise.then (result=>efx.watch (result.id , writerKey , "update"))
+
+// start watching but ignore any updates provoked by me
+.then (result=>efx.on (result.watchable , 
+    (watchid,pack)=>if(efx.getSession() !== pack.session){
+      efx.read (pack.id , writerKey).then ((item) => console.log("the new data is " , item.data))
+    }, 
+    {type:"push")
+ ));
+ 
+ // write some data -- apps script will get woken up
+ itemPromise.then (result=>efx.update(someData , result.id , result.writer));
+```
+
+
+#### session
+
+You may receive event notifications of changes you make in your own session, which may or may not be a useful thing to you. Every call you make to the API includes a session id - which is a unique id which lasts as long as your app is running. When you retrieve a record from the store, it will contain a session property. To avoid dealing with changes you've made yourself you can simply check the session id against the current session. 
+
+```
+efx.get (id)
+.then (function (result) {
+  if (result.data.session !== efx.getSession()) {
+     // It was a change made by some other session than this one ....
+  }
+});
+```
+
+You can also set a custom session id, if you want to check across multiple sessions, set them all like this
+```
+efx.setSession ("barney rubble");
+```
+All items you write will take your custom session id and all will be considered part of the same session
+
+```
+efx.get (id)
+.then (function (result) {
+  if (result.data.session !== efx.getSession()) {
+     // It was a change made by some other session than this one ....
+  }
+});
+```
+### Debugging watch subscriptions
+
+This can be quite hard as in the case of push, and especially url watches, there is no direct connection between your client, the server and the target process. However, the store keeps a log of any watch activity that provoked a push or url event for some time after it has happened, which can be inspected using the getWatchLog method of the SDK.
+
+#### getWatchLog ( watchable , accessKey [,params]) 
+
+The watchable is the key created by .watch() and the accessKey is the access key you used to create it with. You can provide a since=timestamp parameter to filter events since a particular time. The accessKey must exactly match the one used to create the watch. This ensure that the log can only be inspected by authorized processes. Note that no data or message information is stored in the log - it's purely a record of what happened. Note that pull type subscriptions are not logged, since they are managed completely inside the SDK by periodically accessing the API directly.
+
+Here's an example of using this method
+
+```
+efx.getWatchLog(sxKey ,readerKey))
+  .then ((result)=>console.log(result.data));
+
+```
+Because this translates into a native API call, it can be handy to call it directly from a browser to see whats going on with a particular watch. 
+
+```
+https://ephex-auth.appspot-preview.com/watchlog/sx-gja-1234326ubadb/wxk-jd1-p9q5q26wbbhg
+```
+
+which produces this kind of response.  The qualifying log events are in the value property of the response. Note that the *current* status of the watchable key and the access key are also given. In this example, you can see that the logevent is still available for some time after each of the keys have expired.
+
+```
+{
+	"ok": true,
+	"code": 200,
+	"error": "",
+	"value": [{
+		"packet": {
+			"id": "dx2b6-6bq-25dr6aib9j1a",
+			"alias": "",
+			"key": "sx-gja-1234326ubadb",
+			"event": "update",
+			"session": "kf1bdj9kluc",
+			"state": "emitted",
+			"type": "url",
+			"method": "POST",
+			"url": "https://script.google.com/macros/s/AKfycbz6XKhAjYDju7GqQmW6eU26uTElYPywTONxsRssNaw0q6MDXL0/exec?watchable=sx-gja-1234326ubadb"
+		},
+		"logTime": 1492075047310
+	}],
+	"watchable": "sx-gja-1234326ubadb",
+	"reader": "wxk-jd1-p9q5q26wbbhg",
+	"watchableState": "key has expired",
+	"accessKeyState": "key has expired"
+}
+
+```
+### state
+
+This kind of subscription, by definition, introduces some *state* into the API. Behind the scenes the statefullness is managed separately, and uses API calls to interact with the API itself. This approach allows different types of watching to be added on other platforms, yet still use the API to record what's happening. For each of the SDK methods mentioned in this section, there is an equivalent API call, but I won't document them here as they are still fluid. If you are planning to build an SDK in some other language then ping me and I'll get you started
+
+## Contributing and environment
+
+Effex runs as a shared environment on google cloud, but you can also run your own if you prefer. I haven't written that up yet, but ping me if you are interested.
+
+I'd love to hear from anyone who'd like to create (or improve) SDKs for any platforms. JavaScript, Node , Apps Script and VBA are currently available - but I'd like some more. 
+
+I'll also feature any use cases or videos you'd like to share on my site.
+
+### technology
+
+All backend components run in Docker Debian containers, so are easily transportable.
+
+Server - Node 
+
+Database - Redis
+
+Console app - React, Redux
+
+
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
