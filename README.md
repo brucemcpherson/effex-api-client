@@ -78,9 +78,9 @@ All access keys and items are associated with a specific account and will be imm
 This is a public store, and there is no authentication required. However, keys are required for all data accesses, and both the data and its keys are encrypted in the store. You may also choose to further encrypt it before sending it to the store too. In any case, to ensure you comply with your country's privacy laws on the storage of personally identifiable data, don't do it. 
 
 # Client API SDK for Node and JavaScript
-The API has a simple HTTP REST API - take the tutorial to see the structure of each call if you want to write your own client. The tutoral is part of the API console, which you can find at https://storage.googleapis.com/effex-console-static/bundle/index.html#/.  The console also has a JSON editor and viewer to allow you to directly access data in the store. You can even use a browser to access the store if you want - handy for debugging.
+The API has a simple HTTP REST API - take the tutorial to see the structure of each call if you want to write your own client.  The tutoral is part of the API console, which you can find at https://storage.googleapis.com/effex-console-static/bundle/index.html#/.  The console also has a JSON editor and viewer to allow you to directly access data in the store. You can even use a browser to access the store if you want - handy for debugging.
 
-For convenience this node/JavaScript client is available, and of course you can use it in a web app too. There are other platform clients available too.For details see the consolidated repo. https://github.com/brucemcpherson/effex
+For convenience this node/JavaScript client is available, and of course you can use it in a web app too. There are other platform clients available too. For details see the consolidated repo. https://github.com/brucemcpherson/effex
 
 ## Initialization 
 
@@ -614,17 +614,13 @@ You can watch either a specific item, or  an alias. Alias subscription will foll
 
 The first step in subscribing to an object is to create a watchable. A newly created watchable will return a key which will be used to refer to it in future
 
-### watch (id,  key , params)
+### watch (id,  key [, params])
 
 To actually receive events, you need to use .on passing the watchKey created here.
 - The id is the alias or item id to subscribe to (see previous comments on difference between subscribing to an id and an alias). 
 - The key is the reader, writer or updater key authorized to read the item 
 - params are used to modify the watch subscription behavior
 
-### unwatch (watchKey)
-
-This removes any previous watch using the watchKey. unwatch is automatically called when the watch subscription expires.
-- watchKey is the key created when the watch subscription was created
 
 ### on (watchable , callback , options)
 
@@ -667,6 +663,11 @@ Some options  passed to the on method are only applicable to certain types of su
 | start	| timestamp from when to start noticing events. 0 will return all events| now. Will be automatically updated on each callback to avoid repetition |
 | method |	for url push notification, the http method to use to callback on | default is POST |
 | message |	an arbitrary message to send in addition to the usual event data | any object or serializable value |
+
+### off (watchKey)
+
+This removes any previous watch using the watchKey. off is automatically called when the watch subscription expires.
+- watchKey is the key created when the watch subscription was created
 
 ### Events
 
