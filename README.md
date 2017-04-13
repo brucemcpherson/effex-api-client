@@ -650,7 +650,6 @@ url. Note that I've used the message option to pass a key that the receiving url
 efx.on (watchableId , "https://mysite/mycallback", {type:"url", message:{updater:updaterKey}});
 ```
 
-
 #### on options
 
 Some options  passed to the on method are only applicable to certain types of subscription. Here's the full list
@@ -668,6 +667,113 @@ Some options  passed to the on method are only applicable to certain types of su
 
 This removes any previous watch using the watchKey. off is automatically called when the watch subscription expires.
 - watchKey is the key created when the watch subscription was created
+
+### Subscribers to url watches
+
+If you set up a url type subscription, then you pass control to the server to manage state and activity. This means that you can cause a different app (or apps) to be informed in the case of a change to data. An example of that could be a JavaScript app that synchs data with some Google Apps document. To do that, you'd publish an Apps Script webapp that knew what to do with data changes, and instruct the effex server to call its url in the event of a data change
+
+```
+efx.on (watchableId , "https://myappsscritpwebapp", {type:"url", method:"post" , message:{updater:updaterKey}});
+```
+
+Here's what an App Script webapp might look like. 
+
+```
+function doPost(e) {
+  
+  // get the params
+  var params = e.parameter || {};
+  var post = JSON.parse((e.postData || {}).contents);
+  
+  // expecting to find a key to access the thing, plus an id
+  var data = useData (post.id , post.message && post.message.updater );
+  
+  // send back the body as a response
+  var response = {
+    ok:data && data.ok,
+    code:data && data.code,
+    error:data && data.error
+  };
+  return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+}
+```
+It gets woken by a post operation with the info it needs to access the data that's changed in its post body, including the access key it should use (another approach would have been for it to already have exchanged fixed keys with the collaborator).
+
+It should return some kind of response meaningful to you, which will be logged in the watchlog (see later) for you to inspect. For standardization, I recommend that you include the 3 properties shown at least.
+
+Here's how Apps Script could consume the data in the store.
+
+```
+/**
+* @param {string} item the effex id
+* @param {string} updater the updater id
+* @return {object} the data
+*/
+function useData (item, updater) {
+  
+  var sheetName = "pushDemo";
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // access the item
+  if (updater && item) {
+
+    // set up a connection
+    var efx = cEffexApiClient.EffexApiClient.setDev();
+    
+    // read the data
+    var data  = efx.read (item , updater);
+    if (data.ok) {
+
+      // write to the sheet
+      writeToSheet (sheetName, data.value);
+
+    }
+    else {
+      console.log('received a notification on item, but failed to read it', JSON.stringify (data));
+    }
+  }
+  else {
+    console.log('received a notification but dont have a key');
+  }
+  return data;
+  
+}
+
+```
+And whatever your favorite method of writing to the sheet- not really relevant for the example, but for completeness
+```
+
+/**
+* @param {string} sheetName the sheet to write it to
+* @param {[object]} data the data to write to it
+* @return {object} a fiddler
+*/
+function writeToSheet (sheetName , data) {
+
+  // get a fiddler and assign the data
+  var fiddler = new cUseful.Fiddler()
+  .setData (data);
+  
+  // where its goinf
+  var outputRange = SpreadsheetApp
+  .getActiveSpreadsheet()
+  .getRange("A1");
+  
+  // clear the sheet
+  outputRange
+  .getSheet()
+  .clearContents()
+  
+  // write the thing to the sheet
+  fiddler
+  .getRange(outputRange)
+  .setValues(fiddler.createValues());
+  
+  // in case anyone needs it
+  return fiddler;
+}
+```
+To conitue the conversation, Apps Script could use the keys provided to write something back, and if the initiating app (or some other) were listening they'd get the reply that Apps Script had updated the data too. 
 
 ### Events
 
