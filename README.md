@@ -1,5 +1,5 @@
 # effex-api-client
-Node api client for Ephemeral exchange
+Node/JavaScript api client for Ephemeral exchange
 
 A cross platform cache, with a simple HTTP REST API that supports CORS
 
