@@ -601,8 +601,6 @@ The response to an update attempt that is prevented from completing by an outsta
 
 You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. It is possible to create a watch with the REST API, and then query it periodically to see if there have been any events recorded, but for optimum usage it's best to use the SDK for your platform.
 
-Of course this kind of subscription, by definition, introduces some *state* into the API. Behind the scenes the statefullness is managed separately, and uses API calls to interact with the API itself. This approach allows different types of watching to be added on other platforms, yet still use the API to record what's happening. For each of the SDK methods mentioned in this section, there is an equivalent API call, but I won't document them here as they are still fluid. If you are planning to build an SDK in some other language then ping me and I'll get you started.
-
 ### Lifetime
 
 A subscription can be set to have a lifetime after which it disappears. In any case it will disappear a period of time after the last time the item it was watching was last updated.
@@ -768,7 +766,7 @@ This can be quite hard as in the case of push, and especially url watches, there
 
 #### getWatchLog ( watchable , accessKey [,params]) 
 
-The watchable is the key created by .watch() and the accessKey is the access key you used to create it with. You can provide a since=timestamp parameter to filter events since a particular time. The accessKey must exactly match the one used to create the watch. This ensure that the log can only be inspected by authorized processes. Note that no data or message information is stored in the log - it's purely a record of what happened.
+The watchable is the key created by .watch() and the accessKey is the access key you used to create it with. You can provide a since=timestamp parameter to filter events since a particular time. The accessKey must exactly match the one used to create the watch. This ensure that the log can only be inspected by authorized processes. Note that no data or message information is stored in the log - it's purely a record of what happened. Note that pull type subscriptions are not logged, since they are managed completely inside the SDK by periodically accessing the API directly.
 
 Here's an example of using this method
 
@@ -811,6 +809,10 @@ which produces this kind of response.  The qualifying log events are in the valu
 }
 
 ```
+### state
+
+This kind of subscription, by definition, introduces some *state* into the API. Behind the scenes the statefullness is managed separately, and uses API calls to interact with the API itself. This approach allows different types of watching to be added on other platforms, yet still use the API to record what's happening. For each of the SDK methods mentioned in this section, there is an equivalent API call, but I won't document them here as they are still fluid. If you are planning to build an SDK in some other language then ping me and I'll get you started
+
 ## Contributing and environment
 
 Effex runs as a shared environment on google cloud, but you can also run your own if you prefer. I haven't written that up yet, but ping me if you are interested.
