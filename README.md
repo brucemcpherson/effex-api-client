@@ -5,6 +5,8 @@ A cross platform cache, with a simple HTTP REST API that supports CORS
 
 ## Getting started
 
+This documentation  is primarily for the JavaScript and Node clients, but will serve as the master for all platform SDKS. For convenience, there is a consolidated repo for the entire Effex ecosystem here https://github.com/brucemcpherson/effex.
+
 ### NPM
 
 For Node, or if you are developing using a package manager, install the client
@@ -599,6 +601,8 @@ The response to an update attempt that is prevented from completing by an outsta
 
 You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. It is possible to create a watch with the REST API, and then query it periodically to see if there have been any events recorded, but for optimum usage it's best to use the SDK for your platform.
 
+Of course this kind of subscription, by definition, introduces some *state* into the API. Behind the scenes the statefullness is managed separately, and uses API calls to interact with the API itself. This approach allows different types of watching to be added on other platforms, yet still use the API to record what's happening. For each of the SDK methods mentioned in this section, there is an equivalent API call, but I won't document them here as they are still fluid. If you are planning to build an SDK in some other language then ping me and I'll get you started.
+
 ### Lifetime
 
 A subscription can be set to have a lifetime after which it disappears. In any case it will disappear a period of time after the last time the item it was watching was last updated.
@@ -629,7 +633,7 @@ This removes any previous watch using the watchKey. unwatch is automatically cal
 Because not all platforms can support all forms of communication, there are multiple ways of getting messages when a watchable has something to report. Both push and pull notifications are supported. These are the types that can be specified in the type property of the options parameter.
 - push uses socket.io to communicate with the server api, and your callback is invoked whenever a tracked event happens. This is the most transparent form of watching and should be used where your platform supports it.
 - pull schedules regular checks for updates with the server, and invokes your callback if an event is detected during a polling operation. The frequency property (number of seconds between checking) can be set in the options parameter. The client handles the scheduling of the polling, and polling calls do not count towards your quota.
-- url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the oprions parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the server, which will keep on doing that until you unwatch or the subscription expires
+- url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the options parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the server, which will keep on doing that until you unwatch or the subscription expires
 - manually. You can use the getWatch method to return a list of event timestamps for a given watchable at any time. 
 
 Here's some examples of watch notification subscriptons. In this section I'm using es6 syntax for brevity.
@@ -758,6 +762,71 @@ efx.get (id)
   }
 });
 ```
+### Debugging watch subscriptions
+
+This can be quite hard as in the case of push, and especially url watches, there is no direct connection between your client, the server and the target process. However, the store keeps a log of any watch activity that provoked a push or url event for some time after it has happened, which can be inspected using the getWatchLog method of the SDK.
+
+#### getWatchLog ( watchable , accessKey [,params]) 
+
+The watchable is the key created by .watch() and the accessKey is the access key you used to create it with. You can provide a since=timestamp parameter to filter events since a particular time. The accessKey must exactly match the one used to create the watch. This ensure that the log can only be inspected by authorized processes. Note that no data or message information is stored in the log - it's purely a record of what happened.
+
+Here's an example of using this method
+
+```
+efx.getWatchLog(sxKey ,readerKey))
+  .then ((result)=>console.log(result.data));
+
+```
+Because this translates into a native API call, it can be handy to call it directly from a browser to see whats going on with a particular watch. 
+
+```
+https://ephex-auth.appspot-preview.com/watchlog/sx-gja-1234326ubadb/wxk-jd1-p9q5q26wbbhg
+```
+
+which produces this kind of response.  The qualifying log events are in the value property of the response. Note that the *current* status of the watchable key and the access key are also given. In this example, you can see that the logevent is still available for some time after each of the keys have expired.
+
+```
+{
+	"ok": true,
+	"code": 200,
+	"error": "",
+	"value": [{
+		"packet": {
+			"id": "dx2b6-6bq-25dr6aib9j1a",
+			"alias": "",
+			"key": "sx-gja-1234326ubadb",
+			"event": "update",
+			"session": "kf1bdj9kluc",
+			"state": "emitted",
+			"type": "url",
+			"method": "POST",
+			"url": "https://script.google.com/macros/s/AKfycbz6XKhAjYDju7GqQmW6eU26uTElYPywTONxsRssNaw0q6MDXL0/exec?watchable=sx-gja-1234326ubadb"
+		},
+		"logTime": 1492075047310
+	}],
+	"watchable": "sx-gja-1234326ubadb",
+	"reader": "wxk-jd1-p9q5q26wbbhg",
+	"watchableState": "key has expired",
+	"accessKeyState": "key has expired"
+}
+
+```
+## Contributing and environment
+
+Effex runs as a shared environment on google cloud, but you can also run your own if you prefer. I haven't written that up yet, but ping me if you are interested.
+
+I'd love to hear from anyone who'd like to create (or improve) SDKs for any platforms. JavaScript, Node , Apps Script and VBA are currently available - but I'd like some more. 
+
+I'll also feature any use cases or videos you'd like to share on my site.
+
+### technology
+
+All backend components run in Docker Debian containers, so are easily transportable.
+Server - Node 
+Database - Redis
+Console app - React, Redux
+
+
 
 ## More stuff
 See http://ramblings.mcpher.com/Home/excelquirks/ephemeralexchange for more stuff
