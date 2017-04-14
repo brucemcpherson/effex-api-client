@@ -638,7 +638,7 @@ Here's some examples of watch notification subscriptons. In this section I'm usi
 push
 
 ```
-efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , {type:"push"});
+efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , {type:"push", reader: readerKey});
 ```
 
 pull 
@@ -650,7 +650,7 @@ efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for 
 url. Note that I've used the message option to pass a key that the receiving url can use to read the item with.
 
 ```
-efx.on (watchableId , "https://mysite/mycallback", {type:"url", message:{updater:updaterKey}});
+efx.on (watchableId , "https://mysite/mycallback", {type:"url", reader:readerKey, message:{updater:updaterKey}});
 ```
 
 #### on options
@@ -665,7 +665,7 @@ Some options  passed to the on method are only applicable to certain types of su
 | start	| timestamp from when to start noticing events. 0 will return all events| now. Will be automatically updated on each callback to avoid repetition |
 | method |	for url push notification, the http method to use to callback on | default is POST |
 | message |	an arbitrary message to send in addition to the usual event data | any object or serializable value |
-
+| reader | an access key to prove you have access to watch on this account | any valid key for the same account as the watch key |
 ### off (watchKey)
 
 This removes any previous watch using the watchKey. off is automatically called when the watch subscription expires.
