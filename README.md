@@ -601,9 +601,6 @@ The response to an update attempt that is prevented from completing by an outsta
 
 You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. It is possible to create a watch with the REST API, and then query it periodically to see if there have been any events recorded, but for optimum usage it's best to use the SDK for your platform.
 
-Note - that currently push types are not working on Google AppEngine .. secure websockets haven't yet been implemented on App Engine. I'm trying to figure out a workaround.
-
-
 ### Lifetime
 
 A subscription can be set to have a lifetime after which it disappears. In any case it will disappear a period of time after the last time the item it was watching was last updated.
@@ -611,46 +608,50 @@ A subscription can be set to have a lifetime after which it disappears. In any c
 ### Alias or id
 
 You can watch either a specific item, or  an alias. Alias subscription will follow changes in the alias assignment to new items, whereas a specific item subscription will only last as long as the item lasts. An alias subscription will last for as long as an alias is assigned to some item and there is some activity on the item.
-
+return efx.on("update", items[k].id, items[k].writer, callbacks[k], onOptions[k])
 
 ### Watch subscriptions
 
-The first step in subscribing to an object is to create a watchable. A newly created watchable will return a key which will be used to refer to it in future
+Subscribing to an event is with the .on method
 
-### watch (id,  key [, params])
-
-To actually receive events, you need to use .on passing the watchKey created here.
-- The id is the alias or item id to subscribe to (see previous comments on difference between subscribing to an id and an alias). 
-- The key is the reader, writer or updater key authorized to read the item 
-- params are used to modify the watch subscription behavior
-
-
-### on (watchable , callback , options)
+### on (event , id,  key , callback [,options] [,params] )
 
 Because not all platforms can support all forms of communication, there are multiple ways of getting messages when a watchable has something to report. Both push and pull notifications are supported. These are the types that can be specified in the type property of the options parameter.
-- push uses socket.io to communicate with the server api, and your callback is invoked whenever a tracked event happens. This is the most transparent form of watching and should be used where your platform supports it.
-- pull schedules regular checks for updates with the server, and invokes your callback if an event is detected during a polling operation. The frequency property (number of seconds between checking) can be set in the options parameter. The client handles the scheduling of the polling, and polling calls do not count towards your quota.
-- url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the options parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the server, which will keep on doing that until you unwatch or the subscription expires
-- manually. You can use the getWatch method to return a list of event timestamps for a given watchable at any time. 
+- push uses socket.io to communicate with the push server api, and your callback is invoked whenever a tracked event happens. This is the most transparent form of watching and should be used where your platform supports it.
+- pull schedules regular checks for updates with the server, and invokes your callback if an event is detected during a polling operation. The frequency property (number of seconds between checking) can be set in the options parameter. The client handles the scheduling of the polling.
+- url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the options parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the push server, which will keep on doing that until you unwatch or the subscription expires
+- manually. You can use the getEventLog method to return a list of event timestamps for a given watchable at any time. 
 
 Here's some examples of watch notification subscriptons. In this section I'm using es6 syntax for brevity.
 
 push
 
 ```
-efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , {type:"push", reader: readerKey});
+efx.on ("update" ,
+	"dx1f9-skvue9-jee1fb14fjlm", 
+	"uxk-yrmf1l-b19fle0ipede" , 
+ 	(watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , 
+ 	{type:"push"});
 ```
 
 pull 
 
 ```
-efx.on (watchableId , (watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , {type:"pull", frequency:10});
+efx.on ("remove" ,
+	"myalias", 
+	"uxk-yrmf1l-b19fle0ipede" , 
+ 	(watchId, pack)=>console.log (pack.event + ' detected for ' + pack.id) , 
+ 	{type:"pull",frequency:10});
 ```
 
 url. Note that I've used the message option to pass a key that the receiving url can use to read the item with.
 
 ```
-efx.on (watchableId , "https://mysite/mycallback", {type:"url", reader:readerKey, message:{updater:updaterKey}});
+efx.on ("expire" ,
+	"anotheralias", 
+	"uxk-yrmf1l-b19fle0ipede" , 
+ 	"https://mysite/mycallback", 
+ 	{type:"url", message:{updater:updaterKey}});
 ```
 
 #### on options
@@ -665,18 +666,24 @@ Some options  passed to the on method are only applicable to certain types of su
 | start	| timestamp from when to start noticing events. 0 will return all events| now. Will be automatically updated on each callback to avoid repetition |
 | method |	for url push notification, the http method to use to callback on | default is POST |
 | message |	an arbitrary message to send in addition to the usual event data | any object or serializable value |
-| reader | an access key to prove you have access to watch on this account | any valid key for the same account as the watch key |
-### off (watchKey)
 
-This removes any previous watch using the watchKey. off is automatically called when the watch subscription expires.
-- watchKey is the key created when the watch subscription was created
+
+### off (watchable [,params])
+
+This removes any previous watch using the watchable key. off is automatically called when the watch subscription expires.
+- watchable is the key created when the watch subscription was created with the .on method, and is retrieved using the watchable property
 
 ### Subscribers to url watches
 
 If you set up a url type subscription, then you pass control to the server to manage state and activity. This means that you can cause a different app (or apps) to be informed in the case of a change to data. An example of that could be a JavaScript app that synchs data with some Google Apps document. To do that, you'd publish an Apps Script webapp that knew what to do with data changes, and instruct the effex server to call its url in the event of a data change
 
 ```
-efx.on (watchableId , "https://myappsscritpwebapp", {type:"url", method:"post" , message:{updater:updaterKey}});
+efx.on ("update" ,
+	"anotheralias", 
+	"uxk-yrmf1l-b19fle0ipede" , 
+ 	"https://myappsscritpwebapp", 
+ 	{type:"url", method:"post", message:{updater:"uxk-yrmf1l-b19fle0ipede"}});
+
 ```
 
 Here's what an App Script webapp might look like. 
@@ -790,24 +797,30 @@ You can choose which events to listen for from one or more of this list. Events 
 
 The event object varies slightly depending on the type of watch subscribed to, but here is an example of what will be passed to the subscription callback.
 ```
-{ id: 'dx2b6-ub6-2pdj67pbqe1p',
-  alias: '',
-  value: [ 1491921137589 ],
-  key: 'sx-zep-1278rp6ab6db',
+{ id: 'dx1f9-skvue9-jee1fb14fjlm',
+  alias: 'aliaspush',
+  value: [ 1493219138996 ],
+  watchable: 'sx-lbdv5le-1164qg9ef8eb',
   event: 'update',
-  session: '1od1bdemos32',
-  message: { .... some optional message of your choice ... } }
+  message: { updater: 'uxk-yrmf1l-b19fle0ipede' },
+  pushId: '1g71belcnh6s',
+  nextevent: 1493219138997,
+  lastindex: 1,
+  type: 'push' }
 ```
 Here's a brief summary of that these things are
 - id - The id of the item that has been updated, removed or expired.
 - alias - If an alias is being watched (rather than a specific id), it'll be here
 - value - An array of timestamps when the event occurred, starting just after the last time an event was reported. Typically there will be just one, but you can request a longer history, or if you are doing a pull subscription, several events may have occured between pollings.
-- key - the .watchable property of the watch item created by the .watch method
+- watchable - the .watchable key which can be used with the .off method
 - event - the type of event
-- session - the session that initiated the watch
+- pushId - a unique id for the session that initiated the subscription
 - message - an optional message of any custom data you set up with the .on method
+- nextevent - is used by the push server to note the next timestamp that will generate a push event. 
+- lastindex - the index number of the timestamp of the last item sent. This is used in preference to the nextevent if its there.
+- type - the type of event management being used
 
-Note that the contents of the item are not returned, just notification that there was an event, along with the id (and maybe also the alias) of the item. To be able to read the item (or update it), the watching process will need a key authorized to do so. There are multiple ways to do this. 
+The nextevent and lastindex are typically internal to the push server, but they may be of interest for debugging. Note that the contents of the item are not returned, just notification that there was an event, along with the id (and maybe also the alias) of the item. To be able to read the item (or update it), the watching process will need a key authorized to do so. There are multiple ways to do this. 
 
 - If the process watching is the same one as the one that created the watch in the first place, then it will probably already have a suitable key available.
 - If a different process is being poked (probably with a url type watch), it may not have a suitable access key. In this case you may want to use the message option to send one over.
@@ -818,28 +831,7 @@ An example might be a JavaScript process which calls an Apps Script webapp's doP
 It would go something like this (I'll assume the access keys already exist, and for simplicity I've ignored the usual error handling)
 
 ```
-//create an item, maybe with nothing in it, and allow an updater key to update it
-var itemPromise = efx.write ({} , writerKey, {updaters:updaterKey} )
-
-//create a watch for apps script
-itemPromise.then (result=>efx.watch (result.id , writerKey , "update"))
-
-// start watching, but have it call apps script when something happens & let it know an updater key it can use to read it with
-.then (result=>efx.on (result.watchable , "https://myappsscriptwebapp", {type:"url",message:{updater:updaterKey}}));
-
-// also create a local watch to notice anything that apps script does too
-itemPromise.then (result=>efx.watch (result.id , writerKey , "update"))
-
-// start watching but ignore any updates provoked by me
-.then (result=>efx.on (result.watchable , 
-    (watchid,pack)=>if(efx.getSession() !== pack.session){
-      efx.read (pack.id , writerKey).then ((item) => console.log("the new data is " , item.data))
-    }, 
-    {type:"push")
- ));
- 
- // write some data -- apps script will get woken up
- itemPromise.then (result=>efx.update(someData , result.id , result.writer));
+to do
 ```
 
 
@@ -936,6 +928,8 @@ I'll also feature any use cases or videos you'd like to share on my site.
 All backend components run in Docker Debian containers, so are easily transportable.
 
 Server - Node - App Engine
+
+Push server - Node - Compute Engine
 
 Database - Redis - Compute engine
 
