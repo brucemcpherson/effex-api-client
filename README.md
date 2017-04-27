@@ -868,7 +868,7 @@ This can be quite hard as in the case of push, and especially url watches, there
 
 #### getWatchLog ( watchable , accessKey [,params]) 
 
-The watchable is the key created by .watch() and the accessKey is the access key you used to create it with. You can provide a since=timestamp parameter to filter events since a particular time. The accessKey must exactly match the one used to create the watch. This ensure that the log can only be inspected by authorized processes. Note that no data or message information is stored in the log - it's purely a record of what happened. Note that pull type subscriptions are not logged, since they are managed completely inside the SDK by periodically accessing the API directly.
+The watchable is the key created by .watch() and the accessKey is the access key you used to create it with. You can provide a since=timestamp parameter to filter events since a particular time. The accessKey can be any unexpired key that is has read access for this account - it does not need to be associated with the item being watched. Note that no data or message information is stored in the log - it's purely a record of what happened. Note that pull type subscriptions are not logged, since they are managed completely inside the SDK by periodically accessing the API directly.
 
 Here's an example of using this method
 
@@ -883,7 +883,7 @@ Because this translates into a native API call, it can be handy to call it direc
 https://ephex-auth.appspot-preview.com/watchlog/sx-gja-1234326ubadb/wxk-jd1-p9q5q26wbbhg
 ```
 
-which produces this kind of response.  The qualifying log events are in the value property of the response. Note that the *current* status of the watchable key and the access key are also given. In this example, you can see that the logevent is still available for some time after each of the keys have expired.
+which produces this kind of response.  The qualifying log events are in the value property of the response. Note that the *current* status of the watchable key and the access key are also given. The logevent is still available for some time after the watchable event has expired, but you always will need a valid reader key to access it.
 
 ```
 {
@@ -892,22 +892,22 @@ which produces this kind of response.  The qualifying log events are in the valu
 	"error": "",
 	"value": [{
 		"packet": {
-			"id": "dx2b6-6bq-25dr6aib9j1a",
+			"id": "dx1f9-nfglq9-8je1qb1cfznf",
 			"alias": "",
-			"key": "sx-gja-1234326ubadb",
+			"watchable": "sx-vzjenq-11rugo97ffeb",
 			"event": "update",
-			"session": "kf1bdj9kluc",
-			"state": "emitted",
+			"pushId": "ba1benossmi",
+			"error": "emitted",
 			"type": "url",
-			"method": "POST",
-			"url": "https://script.google.com/macros/s/AKfycbz6XKhAjYDju7GqQmW6eU26uTElYPywTONxsRssNaw0q6MDXL0/exec?watchable=sx-gja-1234326ubadb"
+			"ok": true,
+			"code": 201,
+			"url": "https://script.google.com/macros/s/AKfycbz6XKhAjYDju7GqQmW6eU26uTElYPywTONxsRssNaw0q6MDXL0/exec?watchable=sx-vzjenq-11rugo97ffeb",
+			"method": "post"
 		},
-		"logTime": 1492075047310
+		"logTime": 1493299004778
 	}],
-	"watchable": "sx-gja-1234326ubadb",
-	"reader": "wxk-jd1-p9q5q26wbbhg",
-	"watchableState": "key has expired",
-	"accessKeyState": "key has expired"
+	"watchable": "sx-vzjenq-11rugo97ffeb",
+	"reader": "uxk-xodvf1j-b195npe94ofe"
 }
 
 ```
