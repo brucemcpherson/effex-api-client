@@ -595,7 +595,7 @@ lifetime:3600
 modified:1489752873655
 size:196
 ```
-The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 409 along with an intentExpires value, which will indicate the number of seconds from when the request was made until the current lock expires.
+The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 423 along with an intentExpires value, which will indicate the number of seconds from when the request was made until the current lock expires.
 
 ## Watching
 
