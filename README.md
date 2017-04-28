@@ -57,6 +57,7 @@ Before you can write to the store, you need a writer key. You need to generate w
 | item | needed to access a data item | by writing an item to the store with the API |
 | alias | can be used to assign a constant name to a data item | by assigning an alias to to a particular key/item combination using a writer key |
 | intent | authorization for a follow on action | by issuing a read with an intention parameter |
+| watch | a tracking key for push notification, used internally | by issuing a .on API subscription request |
 
 Typically the account owner would keep the boss keys and writer keys private, and share item ,updater or reader keys with collaborators or collaborating applications. Intent keys are an advanced topic, dealt with later in this documentation.
 
@@ -120,7 +121,23 @@ And a fail would be
   error:"item is missing"
 }
 ```
-The property ok is present on all responses and is a simple way to test for success. The code property returns a typical http code for the type of operation being performed. 
+The property "ok" is present on all responses and is a simple way to test for success. The code property matches a typical http code (https://en.wikipedia.org/wiki/List_of_HTTP_status_codes) for the type of operation being performed, and will be a value from this list - So although an http error is not actually provoked, the code for an error of that type will be given in the response along with a description in the error property.
+```
+    "errors": {
+      "NOT_FOUND": 404,
+      "BAD_REQUEST": 400,
+      "UNAUTHORIZED": 401,
+      "FORBIDDEN": 403,
+      "LOCKED": 423,
+      "INTERNAL": 500,
+      "OK": 200,
+      "CREATED": 201,
+      "ACCEPTED": 202,
+      "NO_CONTENT": 204,
+      "CONFLICT": 409,
+      "GONE": 410
+    }
+```
 
 ## Promises
 All responses from api requests are returned as promises.
