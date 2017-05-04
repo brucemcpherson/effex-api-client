@@ -1,7 +1,13 @@
 const efx = require('../dist/index');
-efx.setBase("https://nodestuff-xlibersion.c9users.io"); //dev
 
-const bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
+var dev= true;
+
+// set up client 
+
+var bossKey = dev ? "bx1f9-uem-v8sm1bc1ef9n" : "bx2ao-1zj-bf300lgaod2q"; //dev
+efx.setEnv (dev ? 'dev' : 'prod');
+
+
 const keyTime = 3 * 60; //   3 minutes
 
 // set up structure to parametrize the test
@@ -79,38 +85,57 @@ const write = makeKeys
         onOptions[k].message = {
           updater: result.data.updaters[0]
         };
+        onOptions[k].reader =  result.data.writer;
         return items[k] = result.data;
       }))
   ));
 
-write.then(() => list.forEach((d) => console.log(items[d])));
 
 // make a set of watches looking for updates
-const updateWatches = write
-  .then(() => Promise.all(list.map(k => efx.watch(items[k].id, items[k].writer, "update").then(result => {
-    subUpdates[k] = result.data;
-    console.log(result.data.watchable, ' created for update type ', k);
-  }))));
+const updateWatches = write.then(() => Promise.all(
+  list.map(
+    k => efx.watch(items[k].id, items[k].writer, "update")
+    .then(result => {
+      subUpdates[k] = result.data;
+      console.log(result.data.watchable, ' created for update type ', k);
+      return result;
+    }))
+  ));
 
 // make a set of watches looking for expirations
-const expireWatches = write
-  .then(() => Promise.all(
+const expireWatches = write.then(() => Promise.all(
     list.map(
       k => efx.watch(items[k].id, items[k].writer, "expire")
       .then(result => {
         subExpires[k] = result.data;
         console.log(result.data.watchable, ' created for expire type ', k);
+        return result;
       }))
   ));
 
-// start looking for things happening 
-const onUpdateWatches = updateWatches
-  .then(() => Promise.all(list.map(k => efx.on(subUpdates[k].watchable, callbacks[k], onOptions[k]))));
+
 
 // start looking for things happening 
-const onExpireWatches = expireWatches.then(() => Promise.all(
-  list.map(k => efx.on(subExpires[k].watchable, callbacks[k], onOptions[k]))
-));
+const onExpireWatches = expireWatches
+  .then(() => Promise.all(list.map(k => efx.on(subExpires[k].watchable, callbacks[k], onOptions[k]))))
+  .then (function (r) {
+    console.log('onexpdone');
+    if (!r.every (e=>e.data.ok)) {
+      console.log ("failure expire ons",  r.map(t=>t.data));
+    }
+    return r;
+  });
+  
+  // start looking for things happening 
+const onUpdateWatches = updateWatches
+  .then(() => Promise.all(list.map(k => efx.on(subUpdates[k].watchable, callbacks[k], onOptions[k]))))
+  .then (function (r) {
+    console.log('onupdatesdone');
+    if (!r.every (e=>e.data.ok)) {
+      console.log ("failure update ons",  r.map(t=>t.data));
+    }
+    return r;
+  });
 
 // Provoke some updates
 const updates = onUpdateWatches.then(() => Promise.all(

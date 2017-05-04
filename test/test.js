@@ -1,17 +1,35 @@
 var expect = require('chai').expect;
-
-
 var efx = require('../dist/index');
-
+var dev= true;
+var onOptions = {
+    push: {
+      type: "push"
+    },
+    pull: {
+      type: "pull",
+      frequency: "10"
+    },
+    url: {
+      type: "url",
+      method: "post"
+    }
+  };
+  
 // set up client 
-//efx.setBase("https://ephex-auth.appspot-preview.com"); //prod
 
-efx.setBase("https://nodestuff-xlibersion.c9users.io"); //dev
+var bossKey = dev ? "bx1f9-zb1hg-44ov1bj19f92" : "bx2ao-1zj-bf300lgaod2q"; //dev
+efx.setEnv (dev ? 'dev' : 'prod');
 
-// boss key comes from console /// replace this with your own
-//var bossKey = "bx2ao-1zj-bf300lgaod2q"; //prod
-var bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
 var keyTime = 30 * 60; //   30 minutes
+var waitABit = 1000; // wait for some time before checking of watches worked
+
+function pTimer_ (id, ms) {
+  return new Promise(function (resolve, reject)  {
+    setTimeout(function(){
+      resolve (id);
+    } , ms);
+  });
+}
 
 function testKeys(promises) {
 
@@ -123,7 +141,7 @@ function tests() {
   // service status tests
   var allowTime = 60000;
 
-  describe('status', function() {
+  describe.skip('status', function() {
 
     //return expect(Promise.resolve({ foo: "bar" })).to.eventually.have.property("foo");
     //PING
@@ -162,10 +180,10 @@ function tests() {
     otherTextData = "some other stuff",
     evenMoreTextData = "even more",
     watchAlias = "awatchalias",
-    watches = [],
-    aliasWatches = [],
-    aliasRemoves = [],
-    aliasExpires = [],
+    iu = [],
+    au = [],
+    ar = [],
+    ae = [],
     someData = {
       name: 'xyz',
       a: [1, 2, 3],
@@ -174,7 +192,7 @@ function tests() {
 
   testKeys(promises);
   
-  describe('watching initial', function() {
+  describe.skip('watching initial', function() {
 
     it('write watched item', function() {
 
@@ -200,7 +218,7 @@ function tests() {
     it('write alias to watch', function() {
       return promises.keys
         .then(function(keys) {
-          return promises.watchAlias = efx.writeAlias(someData, watchAlias, keys.writer, "post", {
+          return promises.watchAlias = efx.writeAlias(someData, "au", keys.writer, "post", {
             readers: keys.reader,
             updaters: keys.updater
           });
@@ -212,7 +230,7 @@ function tests() {
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
           expect(data.lifetime).to.be.below(keyTime);
-          expect(data.alias).to.equal(watchAlias);
+          expect(data.alias).to.equal("au");
         });
     });
 
@@ -239,7 +257,7 @@ function tests() {
       return promises.expireWriter
         .then(function(result) {
           var data = result.data;
-          return promises.expireWriterRegister = efx.registerAlias(data.writer, data.readers[0], data.id, watchAlias, {
+          return promises.expireWriterRegister = efx.registerAlias(data.writer, data.readers[0], data.id, "ae", {
             seconds: 10
           });
         })
@@ -249,159 +267,88 @@ function tests() {
         });
     });
 
-    it('create an alias watch for updating', function() {
+    it('au-create an alias push watch for updating', function() {
+      return Promise.all([promises.keys, promises.watchAlias])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          return promises.au = efx.on("update", data.alias, keys.updater, function (id , pack) { 
+            console.log('noted au');
+            au.push({
+              id: id,
+              value: pack
+            })},onOptions.push );
+        })
+        .then(function(result) {
+          console.log ("au ", result);
+          expect(result.watchable).to.be.a('string');
+          expect(result.options.type).to.equal('push');
+        });
+    });
+
+    it('ar-create an alias push watch for removal', function() {
       return Promise.all([promises.keys, promises.watchAlias])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
           // just read with a writer key
-          return promises.watchAliasForUpdate = efx.watch(data.alias, keys.updater, "update");
+          return promises.ar = efx.on("remove", data.alias, keys.updater, function(id , pack){
+            console.log('noted ar');
+            ar.push({
+              id: id,
+              value: pack
+            })},onOptions.push );
         })
         .then(function(result) {
-          expect(true).to.equal(result.data.ok);
-          expect(201).to.equal(result.data.code);
+           console.log ("ar ", result);
+           expect(result.watchable).to.be.a('string');
+           expect(result.options.pushid).to.be.a('string');
         });
     });
     
-    it('create an alias push watch for updating', function() {
-      return Promise.all([promises.keys, promises.watchAlias])
-        .then(function(res) {
-          var keys = res[0];
-          var data = res[1].data;
-          // just read with a writer key
-          return promises.watchPushAliasForUpdate = efx.watch(data.alias, keys.updater, "update");
-        })
-        .then(function(result) {
-          expect(true).to.equal(result.data.ok);
-          expect(201).to.equal(result.data.code);
-        });
-    });
-
-    it('create an alias watch for removal', function() {
-      return Promise.all([promises.keys, promises.watchAlias])
-        .then(function(res) {
-          var keys = res[0];
-          var data = res[1].data;
-          // just read with a writer key
-          return promises.watchAliasForRemove = efx.watch(data.alias, keys.updater, "remove");
-        })
-        .then(function(result) {
-          expect(true).to.equal(result.data.ok);
-          expect(201).to.equal(result.data.code);
-        });
-    });
-
-    it('create an alias watch for expiring', function() {
-      return Promise.all([promises.keys, promises.expireWriterRegister])
-        .then(function(res) {
-          var keys = res[0];
-          var data = res[1].data;
-          // just read with a writer key
-          return promises.watchAliasForExpire = efx.watch(data.alias, keys.reader, "expire");
-        })
-        .then(function(result) {
-          expect(true).to.equal(result.data.ok);
-          expect(201).to.equal(result.data.code);
-        });
-    });
-
-    it('create a watch for updating', function() {
+    it('iu - create a  watch for updating', function() {
       return Promise.all([promises.keys, promises.writeWatched])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
           // just read with a writer key
-          return promises.watchForUpdate = efx.watch(data.id, keys.updater, "update");
+          return promises.iu = efx.on("update", data.id, keys.updater, function (id , pack){
+            console.log('noted iu');
+            iu.push({
+              id: id,
+              value: pack
+            })},onOptions.push );
         })
         .then(function(result) {
-          expect(true).to.equal(result.data.ok);
-          expect(201).to.equal(result.data.code);
+          console.log ("iu ", result);
+           expect(result.watchable).to.be.a('string');
         });
     });
 
-    it('setting an on', function() {
-      return Promise.all([promises.keys, promises.watchForUpdate])
+    it('ae-create an alias  watch for expiring', function() {
+      return Promise.all([promises.keys, promises.watchAlias])
         .then(function(res) {
+          var keys = res[0];
           var data = res[1].data;
-          return efx.on(data.watchable, function(id, pack) {
-            watches.push({
+          // just read with a writer key
+          return promises.ae = efx.on("expire", data.alias, keys.updater, function (id , pack) { 
+            console.log('noted ae');
+            ae.push({
               id: id,
               value: pack
-            });
-            console.log("noted update", id);
-          }, {
-            frequency: 10
-          });
-        });
-    });
-
-    it('setting an alias update on', function() {
-      return Promise.all([promises.keys, promises.watchAliasForUpdate])
-        .then(function(res) {
-          var data = res[1].data;
-          return efx.on(data.watchable, function(id, pack) {
-            aliasWatches.push({
-              id: id,
-              value: pack
-            });
-            console.log("noted alias update", id);
-          }, {
-            frequency: 10
-          });
-        });
-    });
-
-    it('setting a push alias update on', function() {
-      return Promise.all([promises.keys, promises.watchPushAliasForUpdate])
-        .then(function(res) {
-          var data = res[1].data;
-          return efx.on(data.watchable, function(id, pack) {
-            aliasWatches.push({
-              id: id,
-              value: pack
-            });
-            console.log("noted push alias update", id);
-          }, {
-            type: 'push'
-          });
+            })},onOptions.push );
+        })
+        .then(function(result) {
+          console.log ("ae ", result);
+           expect(result.watchable).to.be.a('string');
         });
     });
     
-    it('setting an expire  on', function() {
-      return Promise.all([promises.keys, promises.watchAliasForExpire])
-        .then(function(res) {
-          var data = res[1].data;
-          return efx.on(data.watchable, function(id, pack) {
-            aliasExpires.push({
-              id: id,
-              value: pack
-            });
-            console.log("noted alias expiration", id);
-          }, {
-            frequency: 10
-          });
-        });
-    });
 
-    it('setting an alias on remove', function() {
-      return Promise.all([promises.keys, promises.watchAliasForRemove])
-        .then(function(res) {
-          var data = res[1].data;
-          return efx.on(data.watchable, function(id, pack) {
-            aliasRemoves.push({
-              id: id,
-              value: pack
-            });
-            console.log("noted alias remove", id);
-          }, {
-            frequency: 10
-          });
-        });
-    });
 
     var since;
     it('provoke an update', function() {
-      return Promise.all([promises.keys, promises.writeWatched])
+      return Promise.all([promises.keys, promises.writeWatched,promises.iu])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
@@ -410,6 +357,7 @@ function tests() {
           return promises.provokeUpdate = efx.update(evenMoreTextData, data.id, keys.updater);
         })
         .then(function(result) {
+          console.log ('iu should fire');
           expect(true).to.equal(result.data.ok);
           expect(201).to.equal(result.data.code);
 
@@ -417,7 +365,7 @@ function tests() {
     });
     
     it('provoke an alias update', function() {
-      return Promise.all([promises.keys, promises.watchAlias])
+      return Promise.all([promises.keys, promises.watchAlias,promises.au])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
@@ -425,6 +373,7 @@ function tests() {
           return promises.provokeAliasUpdate = efx.update(evenMoreTextData, data.alias, keys.updater);
         })
         .then(function(result) {
+  console.log('expect an au update');
           expect(result.data.ok).to.equal(true);
           expect(result.data.code).to.equal(201);
 
@@ -434,9 +383,9 @@ function tests() {
     it('read a watchable', function() {
       return Promise.all([promises.keys, promises.watchForUpdate, promises.provokeUpdate])
         .then(function(res) {
-          var data = res[1].data;
+          var data = res[2].data;
           // just read with a writer key
-          return promises.watchableRead = efx.getWatched(data.watchable);
+          return promises.watchableRead = efx.getEventLog(data.id,data.updater,"update");
         })
         .then(function(result) {
           expect(result.data.ok).to.equal(true);
@@ -444,27 +393,27 @@ function tests() {
         });
 
     });
-
-    it('read a watchable with since parameter', function() {
+    
+    it('read a watchable with since', function() {
       return Promise.all([promises.keys, promises.watchForUpdate, promises.provokeUpdate])
         .then(function(res) {
-          var data = res[1].data;
+          var data = res[2].data;
           // just read with a writer key
-          return promises.watchableRead = efx.getWatched(data.watchable, {
+          return promises.watchableRead = efx.getEventLog(data.id,data.updater,"update",{
             since: since.getTime()
           });
         })
         .then(function(result) {
           expect(result.data.ok).to.equal(true);
           expect(result.data.code).to.equal(200);
-          expect(result.data.value.length).to.equal(1);
         });
 
     });
 
+
   });
 
-  describe('items', function() {
+  describe.skip ('items', function() {
 
     it('write post', function() {
 
@@ -561,8 +510,7 @@ function tests() {
 
   });
 
-
-  describe('sharing items', function() {
+  describe.skip('sharing items', function() {
 
     it('assigning updaters and readers', function() {
 
@@ -627,14 +575,15 @@ function tests() {
     });
 
     it('provoke annother update', function() {
-      return Promise.all([promises.keys, promises.writeWatched])
+      return Promise.all([promises.keys, promises.writeWatched,promises.iu,promises.provokeUpdate])
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
           // just read with a writer key
-          return promises.provokeUpdate = efx.update(textData, data.id, keys.updater);
+          return promises.provokeAnotherUpdate = efx.update(textData, data.id, keys.updater);
         })
         .then(function(result) {
+          console.log("iu shoud fire again");
           expect(true).to.equal(result.data.ok);
           expect(201).to.equal(result.data.code);
 
@@ -644,7 +593,7 @@ function tests() {
 
   });
 
-  describe('working with aliases', function() {
+  describe.skip('working with aliases', function() {
 
     it('writealias', function() {
       return promises.keys
@@ -865,28 +814,32 @@ function tests() {
     it('redo the watched alias', function() {
       return promises.keys
         .then(function(keys) {
-          return promises.redoWatchAlias = efx.writeAlias(textData, watchAlias, keys.writer, "post", {
+          return promises.redoWatchAlias = efx.writeAlias(textData, "au", keys.writer, "post", {
             readers: keys.reader,
             updaters: keys.updater
           });
         })
         .then(function(result) {
+          console.log("expect another au");
           var data = result.data;
           expect(data).to.be.an('object');
           expect(data.ok).to.equal(true);
           expect(data.code).to.equal(201);
           expect(data.id).to.be.a('string');
           expect(data.lifetime).to.be.below(keyTime);
-          expect(data.alias).to.equal(watchAlias);
+          expect(data.alias).to.equal("au");
         });
     });
 
     it('remove the watched alias', function() {
-      return promises.keys
-        .then(function(keys) {
-          return efx.remove(watchAlias, keys.writer);
+      return Promise.all([promises.keys,promises.redoWatchAlias])
+        .then(function(r) {
+          var keys = r[0];
+          var data = r[1].data;
+          return efx.remove(data.alias, keys.writer);
         })
         .then(function(result) {
+          console.log ("expect remove of au");
           var data = result.data;
           expect(data).to.be.an('object');
           expect(data.ok).to.equal(true);
@@ -924,7 +877,6 @@ function tests() {
         .then(function(res) {
           var keys = res[0];
           var data = res[1].data;
-          // just read with a writer key
           return promises.intentRead = efx.read(data.id, keys.updater, {
             intention: "update"
           });
@@ -932,6 +884,22 @@ function tests() {
         .then(function(result) {
           expect(true).to.equal(result.data.ok);
           expect(textData).to.equal(result.data.value);
+        });
+    });
+    
+    it('read with intent - should fail because someone else has it already', function() {
+      return Promise.all([promises.keys, promises.intentRead])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return efx.read(data.id, keys.writer, {
+            intention: "update"
+          });
+        })
+        .then(function(result) {
+          expect(result.data.ok).to.equal(false);
+          expect(result.data.code).to.equal(423);
         });
     });
 
@@ -978,7 +946,7 @@ function tests() {
         })
         .then(function(result) {
           expect(result.data.ok).to.equal(false);
-          expect(result.data.code).to.equal(409);
+          expect(result.data.code).to.equal(423);
         });
     });
 
@@ -993,7 +961,7 @@ function tests() {
         })
         .then(function(result) {
           expect(result.data.ok).to.equal(false);
-          expect(result.data.code).to.equal(409);
+          expect(result.data.code).to.equal(400);
         });
     });
 
@@ -1006,7 +974,7 @@ function tests() {
         })
         .then(function(result) {
           expect(result.data.ok).to.equal(false);
-          expect(result.data.code).to.equal(409);
+          expect(result.data.code).to.equal(423);
         });
     });
 
@@ -1085,44 +1053,68 @@ function tests() {
 
 
   });
+  
 
-  describe('checking watches', function() {
-
-    // wait till the last thing is finished
-    it('item watches', function() {
-
-      return promises.intentAlias
-        .then(function() {
-          expect(watches.length).to.equal(2);
+  
+  describe.skip('check watches', function() {
+    
+   it('ae-alias expires', function() {
+      return Promise.all([promises.keys, promises.ae,promises.keys])
+        .then(function (res){
+          return pTimer_ (res , waitABit);
+        })
+        .then(function(res) {
+          var e = res[1];
+          var k = res[2];
+          console.log('ae',ae.map(function(d){ return d.value.value;}));
+          return efx.getEventLog (e.watchable, k.updater , e.event);
         });
     });
 
 
-    // wait till the last thing is finished
-    it('alias watches', function() {
-
-      return promises.intentAlias
-        .then(function() {
-          expect(aliasWatches.length).to.equal(2);
+    
+   it('ar-alias removes', function() {
+      return Promise.all([promises.keys, promises.ar])
+        .then(function(res) {
+          console.log('ar',ar.map(function(d){ return d.value.value;}));
+          return res;
         });
     });
-
-    it('remove watches', function() {
-
-      return promises.intentAlias
-        .then(function() {
-          expect(aliasRemoves.length).to.equal(1);
+  
+     it('au-alias updates', function() {
+      return Promise.all([promises.keys, promises.au,promises.keys, promises.writeAlias,promises.provokeAliasUpdate])
+        .then(function (res){
+          return pTimer_ (res , waitABit);
+        })
+        .then(function(res) {
+          var e = res[1];
+          var i = res[3].data;
+          return efx.getEventLog (i.alias || i.id, i.writer , e.event);
+        })
+        .then (function (res) {
+          expect(res.data.value.length).to.equal(au.length-1);
+          return res;
         });
     });
-
-    it('expire watches', function() {
-
-      return promises.intentAlias
-        .then(function() {
-          expect(aliasExpires.length).to.equal(1);
+    
+   it('iu-item updates', function() {
+      return Promise.all([promises.keys, promises.iu,promises.keys, promises.writeWatched,promises.provokeAnotherUpdate])
+        .then(function (res){
+          return pTimer_ (res , waitABit);
+        })
+        .then(function(res) {
+          var e = res[1];
+          var i = res[3].data;
+          return efx.getEventLog (i.alias || i.id, i.writer , e.event);
+        })
+        .then (function (res) {
+          expect(res.data.value.length).to.equal(iu.length-1);
+          return res;
         });
     });
-
+    
+    
   });
+
 }
 tests();

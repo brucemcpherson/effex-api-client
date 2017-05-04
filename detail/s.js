@@ -1,9 +1,14 @@
 "use strict";
 
 var efx = require('../dist/index');
-efx.setBase("https://nodestuff-xlibersion.c9users.io"); //dev
 
-var bossKey = "bx2b6-2db-oy4pbei1c6yo"; //dev
+var dev = true;
+
+// set up client 
+
+var bossKey = dev ? "bx2b6-2db-oy4pbei1c6yo" : "bx2ao-1zj-bf300lgaod2q"; //dev
+efx.setEnv(dev ? 'dev' : 'prod');
+
 var keyTime = 3 * 60; //   3 minutes
 
 // set up structure to parametrize the test
@@ -83,15 +88,10 @@ var write = makeKeys.then(function () {
       onOptions[k].message = {
         updater: result.data.updaters[0]
       };
+      onOptions[k].reader = result.data.writer;
       return items[k] = result.data;
     });
   }));
-});
-
-write.then(function () {
-  return list.forEach(function (d) {
-    return console.log(items[d]);
-  });
 });
 
 // make a set of watches looking for updates
@@ -100,6 +100,7 @@ var updateWatches = write.then(function () {
     return efx.watch(items[k].id, items[k].writer, "update").then(function (result) {
       subUpdates[k] = result.data;
       console.log(result.data.watchable, ' created for update type ', k);
+      return result;
     });
   }));
 });
@@ -110,14 +111,8 @@ var expireWatches = write.then(function () {
     return efx.watch(items[k].id, items[k].writer, "expire").then(function (result) {
       subExpires[k] = result.data;
       console.log(result.data.watchable, ' created for expire type ', k);
+      return result;
     });
-  }));
-});
-
-// start looking for things happening 
-var onUpdateWatches = updateWatches.then(function () {
-  return Promise.all(list.map(function (k) {
-    return efx.on(subUpdates[k].watchable, callbacks[k], onOptions[k]);
   }));
 });
 
@@ -126,6 +121,33 @@ var onExpireWatches = expireWatches.then(function () {
   return Promise.all(list.map(function (k) {
     return efx.on(subExpires[k].watchable, callbacks[k], onOptions[k]);
   }));
+}).then(function (r) {
+  console.log('onexpdone');
+  if (!r.every(function (e) {
+    return e.data.ok;
+  })) {
+    console.log("failure expire ons", r.map(function (t) {
+      return t.data;
+    }));
+  }
+  return r;
+});
+
+// start looking for things happening 
+var onUpdateWatches = updateWatches.then(function () {
+  return Promise.all(list.map(function (k) {
+    return efx.on(subUpdates[k].watchable, callbacks[k], onOptions[k]);
+  }));
+}).then(function (r) {
+  console.log('onupdatesdone');
+  if (!r.every(function (e) {
+    return e.data.ok;
+  })) {
+    console.log("failure update ons", r.map(function (t) {
+      return t.data;
+    }));
+  }
+  return r;
 });
 
 // Provoke some updates
