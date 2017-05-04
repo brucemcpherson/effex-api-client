@@ -668,6 +668,54 @@ and should return true if the expBackoff should reattempt the action function
 
 The action function can be a regular function or a Promise (or even an actual value instead of a function) - all are turned into Promises internally.
 
+## Key management
+
+The client provides a few utilities for managing keys. 
+
+### setKeys (keys)
+
+Setting the keys is a handy way of keeping reader, updater , writer keys somewhere for easy retrieval. You'd use it like this
+
+```
+efx.setKeys ({
+  reader:'xxx',
+  updater:'yyy',
+  writer:'zzz'
+});
+```
+Some of the methods can access this object for default keys when they are not supplied as an argument. 
+
+### getKeys ()
+
+Returns anything that's been stored with setKeys().
+
+```
+var keys = efx.getKeys (); 
+```
+
+Note that it doesn't care what you store in here so it can be useful to add other stuff and keys here too, for example
+
+```
+efx.setKeys( efx,getKeys()).myOtherApiKey = "uuuuuuu";
+```
+
+but see makeKeys ...
+
+### makeKeys (bossKey[,params])
+
+Quite often you'll want to make a whole set of keys. This is an aggregated function to create one of each type of key. Note this overwrites anything that has been written with setKeys()
+
+```
+efx.makeKeys( bossKey ).then (()=>console.log (efx.getKeys());
+```
+### getUriKeys ()
+
+You don't have to call this explicitly as it happens by default, if it detects you are running in a browser. If any of these parameters are found in the URI
+```
+["updater", "reader", "item","boss","writer","alias","id"]
+```
+getKeys will use these are default values to start with.
+
 
 ## Watching
 
