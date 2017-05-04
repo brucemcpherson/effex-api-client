@@ -1,4 +1,4 @@
 node_modules
 dist
 detail
-src/lib/config.sys
+src/lib/config.js
