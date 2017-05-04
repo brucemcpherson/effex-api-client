@@ -162,13 +162,14 @@ Here is a list of the parameters that the API understands and where they can be 
 | seconds | As an alternative to days, how many seconds an access key should live for | generating access keys |
 | intention | To signal an intention for further operations, such as an update following a read | to lock updating for a time |
 | intent | An authorization key to proceed with a follow on operation | to fulfill a previous signalled intention |
+| backoff | Whether to use exponential backoff automatically | when issuing a read with an intent in case another also is doing it at the same time |
 
 
 
 
 ### setBase (url)
 
-Sets the API base url. Note that this is likely to change as the service moves from beta.
+Sets the API base url. Note that this is likely to change or be removed as the service moves from beta. It's unlikely you would need to use this anyway, as it already defaults to the production API. 
 
 ```
 efx.setBase("https://ephex-auth.appspot-preview.com");
@@ -614,6 +615,60 @@ size:196
 ```
 The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 423 along with an intentExpires value, which will indicate the number of seconds from when the request was made until the current lock expires.
 
+### exponentional backoff
+
+The Node/JavaScript client has a general exponential backoff built in which is not specific to the Ephemeral Exchange API. In other words, you can use it with other APIS too. It can be used with Effex API automatically by setting the backoff parameter true, in order to avoid races between multiple clients making an intention read as in the example below.
+
+```
+efx.read ("dx1f7-s18-167ibfeb9bfm", "uxk-f1m-b17ce9uo_t9b", {intention:"update",backoff:true})
+.then (function (response) {
+  // do something  with response.data
+});
+```
+In fact, this simply wraps your read request in this code, which uses the general exponential backoff function to detect a lock state (423), which indicates that there is already a lock in progress. It will try again until it succeeds or gives up. Note that the wait time is optimized by inspecting the API return that shows how long any current lock has got to live.
+```
+return ns.expBackoff(
+      
+      // read an item and decalre an intention to update
+      () => read_(id, reader, params),
+      
+      // function for checking if we want to do a retry, because we got a lock 
+      (lastResult) => params.backoff && lastResult.data.code === 423, {
+      
+        // we have a custom wait time to leverage info about lock lifetime
+        setWaitTime: (waitTime, passes, result, proposed) => {
+          return Math.min(proposed, ((result && result.data && result.data.intentExpires) || 0) * 1000);
+        }
+        
+      });
+      
+```
+#### expBackoff ( action, doRetry [, options])
+
+This general purpose expBackoff function returns a Promise which is resolved when action is finally finished or rejected if it gives up by having tried too many times. Whether or not to retry is decided by a true or false return by the doRetry callback, and the behavior is controlled by the options which can be any of
+
+| Property | what it is for | when used in client |
+| ------------- | ---------------| ---------------|
+| maxPasses |	Maximum times to try | default is 5 |
+| waitTime |	The base for the caclulation of waiting time | default is 500ms | 
+| passes	|how many times weve already tried | will probably always be 0 |
+| setWaitTime |	a callback which can receive (waitTime , passes , result , proposed)| to change the waitTime for the next pass from the value in proposed |
+
+Using the setWaitTime option can be used to alter the proposed waiting time as calculated by the backoff function, to some other values, perhaps based on the response received from the last call to 'action'. The arguments received by this callback are
+- *waitTime* the base waitTime
+- *passes* how many times tried so far
+- *result* the last result received from the action function
+- *proposed* how long expBackoff proposes to wait before trying the next pass
+To change proposed to some different value, return any non-zero number of milliseconds
+
+The doRetry callback receives these arguments
+- *passes* how many times tried so far
+- *result* the last result received from the action function
+and should return true if the expBackoff should reattempt the action function
+
+The action function can be a regular function or a Promise (or even an actual value instead of a function) - all are turned into Promises internally.
+
+
 ## Watching
 
 You can subscribe to watch an item to listen for changes. A subscription is made by a combination of access key and item id (since a key is needed to validate that you have access to an item). You can use any of reader, writer and updater keys to subscribe with, as long as they have read access to the target item. Note that watching is managed within the SDK. It is possible to create a watch with the REST API, and then query it periodically to see if there have been any events recorded, but for optimum usage it's best to use the SDK for your platform.
@@ -930,7 +985,7 @@ which produces this kind of response.  The qualifying log events are in the valu
 ```
 ### state
 
-This kind of subscription, by definition, introduces some *state* into the API. Behind the scenes the statefullness is managed separately, and uses API calls to interact with the API itself. This approach allows different types of watching to be added on other platforms, yet still use the API to record what's happening. For each of the SDK methods mentioned in this section, there is an equivalent API call, but I won't document them here as they are still fluid. If you are planning to build an SDK in some other language then ping me and I'll get you started
+This kind of subscription, would seem to introduce some *state* into the API process, but in fact the API itself is stateless. There is a separate server which manages notifications. The API simply registers details about interest in notifications as items in the back end cache. The push server watches for changes in data items and for those that want to know about them and handles all the connections with the push subscribers, so the push server itself is subscribed to the back end cache. This means that other APIS which were able to access the same database, would not need to implement their own push notification.
 
 ## Contributing and environment
 
