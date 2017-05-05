@@ -163,8 +163,7 @@ Here is a list of the parameters that the API understands and where they can be 
 | intention | To signal an intention for further operations, such as an update following a read | to lock updating for a time |
 | intent | An authorization key to proceed with a follow on operation | to fulfill a previous signalled intention |
 | backoff | Whether to use exponential backoff automatically | when issuing a read with an intent in case another also is doing it at the same time |
-
-
+| watchable | a watchable key | to filter an event log query by a specific watchable id |
 
 
 ### setBase (url)
@@ -740,7 +739,7 @@ Because not all platforms can support all forms of communication, there are mult
 - push uses socket.io to communicate with the push server api, and your callback is invoked whenever a tracked event happens. This is the most transparent form of watching and should be used where your platform supports it.
 - pull schedules regular checks for updates with the server, and invokes your callback if an event is detected during a polling operation. The frequency property (number of seconds between checking) can be set in the options parameter. The client handles the scheduling of the polling.
 - url invokes a url as a callback. You specify the url in the callback parameter, and the method to use (default is POST) can be specified in the method property of the options parameter. There is no local notification of events - they are sent to the url. This is also a push notification as messages are initiated by the push server, which will keep on doing that until you unwatch or the subscription expires
-- manually. You can use the getEventLog method to return a list of event timestamps for a given watchable at any time. 
+- manually. You can use the getEventLog method to return a list of event timestamps for a given  item and watchable at any time. 
 
 Here's some examples of watch notification subscriptons. In this section I'm using es6 syntax for brevity.
 
@@ -1056,6 +1055,12 @@ Which produces a response like this. Using an alias instead of an item id, as in
 	"values": [1493982602685, 1493982620753]
 }
 ```
+You can use a watchable parameter to restrict to a particular watchable key
+
+```
+/eventlog/uxk-gsarf1e-b19424u6413h/item-pd-demo/update?watchable=sx-i24-11qsg49of1hb
+```
+
 #### nextevent, since and lastindex
 
 You can specify since or lastindex as parameters to the eventlog method. If you specify either of these, then the values returned for each watch will be only the values that have occurred since the given value. lastindex refers to the index number in the array of event timestamps, and since refers to the timestamps themselves. Effex also maintains an individual lastindex for each watch which is updated on each notification. If you do not specify since or lastindex, the values returned use that and return only what hasn't yet been delivered to a .on callback.
@@ -1064,10 +1069,10 @@ You can specify since or lastindex as parameters to the eventlog method. If you 
 
 It can be useful to see which notifications actually generated messages. Note that pull type subscriptions are not logged, since they are managed completely inside the SDK by periodically accessing the API directly, so you'll only find push or url type notifications here. For debugging, you'll also find any error messages here.
 
-Because this translates into a native API call, it can be handy to call it directly from a browser to see whats going on with a particular watch subscriptions. 
+Because this translates into a native API call, it can be handy to call it directly from a browser to see whats going on with a particular watch subscriptions, which would translate to something like this
 
 ```
-https://ephex-auth.appspot-preview.com/watchlog/sx-gja-1234326ubadb/wxk-jd1-p9q5q26wbbhg
+/watchlog/sx-ah424-11bsr49gfshb/uxk-gsarf1e-b19424u6413h
 ```
 
 which produces this kind of response.  The qualifying log events are in the value property of the response. Note that the *current* status of the watchable key and the access key are also given. The logevent is still available for some time after the watchable event has expired, but you always will need a valid reader key to access it.
