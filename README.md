@@ -986,18 +986,85 @@ efx.get (id)
 
 This can be quite hard as in the case of push, and especially url watches, there is no direct connection between your client, the server and the target process. However, the store keeps a log of any watch activity that provoked a push or url event for some time after it has happened, which can be inspected using the getWatchLog method of the SDK.
 
-#### getWatchLog ( watchable , accessKey [,params]) 
+#### getEventLog ( id , accessKey, event  [,params]) 
 
-The watchable is the key created by .watch() and the accessKey is the access key you used to create it with. You can provide a since=timestamp parameter to filter events since a particular time. The accessKey can be any unexpired key that is has read access for this account - it does not need to be associated with the item being watched. Note that no data or message information is stored in the log - it's purely a record of what happened. Note that pull type subscriptions are not logged, since they are managed completely inside the SDK by periodically accessing the API directly.
+You can provide a since=timestamp parameter to filter events since a particular time.  Note that no data or message information is stored in the log - it's purely a record of what happened. 
 
 Here's an example of using this method
 
 ```
-efx.getWatchLog(sxKey ,readerKey))
+efx.getEventLog(id ,readerKey, "update"))
   .then ((result)=>console.log(result.data));
 
 ```
-Because this translates into a native API call, it can be handy to call it directly from a browser to see whats going on with a particular watch. 
+Which produces a response like this. Using an alias instead of an item id, as in the example below, means that you may get back more watchers than you expect since alias watchers shift to new items are they are reassigned. They will eventually expire, or you can delete them explicitly with the .off method
+```
+{
+	"ok": true,
+	"key": "uxk-gsarf1e-b19424u6413h",
+	"validtill": "2017-05-26T10:15:00.966Z",
+	"type": "updater",
+	"plan": "x",
+	"accountId": "1f9",
+	"code": 200,
+	"reader": "uxk-gsarf1e-b19424u6413h",
+	"id": "dx1f9-bwvq89-o9f1bb1yf3cp",
+	"alias": "item-pd-demo",
+	"modified": 1493982644014,
+	"session": "r01bf9cklgr",
+	"watchables": [{
+		 
+		"created": 1493903945112,
+		"watchable": "sx-rhqux24-11ilb895f4hb",
+		"nextevent": 1493903945112,
+		"id": "dx1f9-bwvq89-o9f1bb1yf3cp",
+		"alias": "item-pd-demo",
+		"event": "update",
+		"options": {
+			"type": "push",
+			"frequency": 30,
+			"start": 1493903945112,
+			"method": "POST",
+			"message": {
+				"mapsApiKey": "AIzaSyDoWGxNZ2zOLzPyyssH508seSk4vd5YA9U"
+			},
+			"uq": "vd1bf9pqac5",
+			"pushid": "271bf9hplee"
+		},
+		"values": [1493982602685, 1493982620753]
+	},  {
+		"created": 1493973689602,
+		"watchable": "sx-keorn24-115uja9afvhb",
+		"nextevent": 1493982620754,
+		"lastindex": 1,
+		"id": "dx1f9-bwvq89-o9f1bb1yf3cp",
+		"alias": "item-pd-demo",
+		"event": "update",
+		"options": {
+			"type": "push",
+			"frequency": 30,
+			"start": 1493973689601,
+			"method": "POST",
+			"message": {
+				"mapsApiKey": "AIzaSyDoWGxNZ2zOLzPyyssH508seSk4vd5YA9U"
+			},
+			"uq": "km1bfbsao6s",
+			"pushid": "1261bfbs9f71"
+		},
+		"values": []
+	}],
+	"values": [1493982602685, 1493982620753]
+}
+```
+#### nextevent, since and lastindex
+
+You can specify since or lastindex as parameters to the eventlog method. If you specify either of these, then the values returned for each watch will be only the values that have occurred since the given value. lastindex refers to the index number in the array of event timestamps, and since refers to the timestamps themselves. Effex also maintains an individual lastindex for each watch which is updated on each notification. If you do not specify since or lastindex, the values returned use that and return only what hasn't yet been delivered to a .on callback.
+
+#### getWatchLog ( watchableid , accessKey  [,params]) 
+
+It can be useful to see which notifications actually generated messages. Note that pull type subscriptions are not logged, since they are managed completely inside the SDK by periodically accessing the API directly, so you'll only find push or url type notifications here. For debugging, you'll also find any error messages here.
+
+Because this translates into a native API call, it can be handy to call it directly from a browser to see whats going on with a particular watch subscriptions. 
 
 ```
 https://ephex-auth.appspot-preview.com/watchlog/sx-gja-1234326ubadb/wxk-jd1-p9q5q26wbbhg
