@@ -164,6 +164,7 @@ Here is a list of the parameters that the API understands and where they can be 
 | intent | An authorization key to proceed with a follow on operation | to fulfill a previous signalled intention |
 | backoff | Whether to use exponential backoff automatically | when issuing a read with an intent in case another also is doing it at the same time |
 | watchable | a watchable key | to filter an event log query by a specific watchable id |
+| since | a timestamp| to filter an event log query to select only events after a particular timestamp |
 
 
 ### setBase (url)
