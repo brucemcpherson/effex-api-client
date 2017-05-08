@@ -18,7 +18,11 @@ var api = (function(ns) {
   let admin;
   let apiEnv;
   let sting;
-
+  
+  // expose an instance for custom use by to the client
+  // since we have it anyway
+  ns.ax = axios.create();
+  
   /**
    * select environment
    * @param {string} env (dev/prod)
@@ -443,10 +447,12 @@ var api = (function(ns) {
   function doPull_(id, key, event, watch, params) {
 
     params = params || {};
-    if (watch.options.start > 0 && !params.since) {
+    if (!params.since) {
       params.since = watch.options.start;
     }
-
+    
+    // because push notifications can ask the server the time now
+    if (params.since < 0) params.since = 0;
     // this is  recursive
     function p() {
 
@@ -461,26 +467,30 @@ var api = (function(ns) {
             watch.stopped = true;
             throw 'polling error ' + JSON.stringify(pack);
           }
-
+          // if since is -1, then we were asking the server for the time
+          if (params.since === -1) params.since = pack.now;
+          
           // if we got some events, do the callback and update for the next one.
-          if (pack.value.length && !watch.stopped) {
-
+          if (pack.values.length && !watch.stopped) {
+            
+            // for next loop
+            params.since = pack.values[pack.values.length-1]+1;
+            
             watch.callback(watch.watchable, {
               id: pack.id,
               alias: pack.alias,
-              event: pack.event,
+              event: event,
               session: ns.getSession(),
               message: watch.message || "",
               key: key,
-              value: pack.value,
-              nextevent: pack.nextevent,
-              lastindex: pack.lastindex,
-              watchable: watch.watchable
+              value: pack.values,
+              watchable: watch.watchable,
+              nextevent:params.since
             });
-            // this can be used to manage picking off items
-            params.lastindex = pack.lastindex;
+
 
           }
+          
           // cycle for the next
           ns.handyTimer(watch.options.frequency * 1000, watch.watchable).then(p);
         });
