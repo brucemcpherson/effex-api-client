@@ -996,7 +996,7 @@ efx.getEventLog(id ,readerKey, "update"))
   .then ((result)=>console.log(result.data));
 
 ```
-Which produces a response like this. Using an alias instead of an item id, as in the example below, means that you may get back more watchers than you expect since alias watchers shift to new items are they are reassigned. They will eventually expire, or you can delete them explicitly with the .off method
+Which produces a response like this, which shows the timestamps for update events for a particular item. It also shows all the  subscriptions that exist for the item (or alias) id. The nextevent property indictaes that events occurring after this values have still to be delivered.  
 ```
 {
 	"ok": true,
@@ -1007,63 +1007,36 @@ Which produces a response like this. Using an alias instead of an item id, as in
 	"accountId": "1f9",
 	"code": 200,
 	"reader": "uxk-gsarf1e-b19424u6413h",
-	"id": "dx1f9-bwvq89-o9f1bb1yf3cp",
+	"id": "dx1f9-oxmo2s9-aqf1nb1bfwjy",
 	"alias": "item-pd-demo",
-	"modified": 1493982644014,
+	"modified": 1494239069002,
 	"session": "r01bf9cklgr",
 	"watchables": [{
-		 
-		"created": 1493903945112,
-		"watchable": "sx-rhqux24-11ilb895f4hb",
-		"nextevent": 1493903945112,
-		"id": "dx1f9-bwvq89-o9f1bb1yf3cp",
-		"alias": "item-pd-demo",
+		"created": 1494072711625,
+		"watchable": "sx-tb224-11j9g896f6hb",
+		"nextevent": 1494072711625,
 		"event": "update",
 		"options": {
 			"type": "push",
 			"frequency": 30,
-			"start": 1493903945112,
+			"start": 1494072711625,
 			"method": "POST",
 			"message": {
-				"mapsApiKey": "AIzaSyDoWGxNZ2zOLzPyyssH508seSk4vd5YA9U"
+				"mapsApiKey": "xxxxxxxxxx"
 			},
-			"uq": "vd1bf9pqac5",
-			"pushid": "271bf9hplee"
-		},
-		"values": [1493982602685, 1493982620753]
-	},  {
-		"created": 1493973689602,
-		"watchable": "sx-keorn24-115uja9afvhb",
-		"nextevent": 1493982620754,
-		"lastindex": 1,
-		"id": "dx1f9-bwvq89-o9f1bb1yf3cp",
-		"alias": "item-pd-demo",
-		"event": "update",
-		"options": {
-			"type": "push",
-			"frequency": 30,
-			"start": 1493973689601,
-			"method": "POST",
-			"message": {
-				"mapsApiKey": "AIzaSyDoWGxNZ2zOLzPyyssH508seSk4vd5YA9U"
-			},
-			"uq": "km1bfbsao6s",
+			"uq": "14b1bfeqokb0",
 			"pushid": "1261bfbs9f71"
-		},
-		"values": []
+		}
 	}],
-	"values": [1493982602685, 1493982620753]
+	"now": 1494239406066,
+	"values": [1494239047481, 1494239069111]
 }
 ```
-You can use a watchable parameter to restrict to a particular watchable key
+You can use a watchable parameter to restrict to a particular watchable key, and the since parameter to filter the event times since a given timestamp. Note that the contents of the optional message is visible here. I may redact the message contents in the future, but for now I'm leaving it visible.
 
 ```
-/eventlog/uxk-gsarf1e-b19424u6413h/item-pd-demo/update?watchable=sx-i24-11qsg49of1hb
+/eventlog/uxk-gsarf1e-b19424u6413h/item-pd-demo/update?watchable=sx-i24-11qsg49of1hb&since=1494239069111
 ```
-
-#### nextevent, since and lastindex
-
-You can specify since or lastindex as parameters to the eventlog method. If you specify either of these, then the values returned for each watch will be only the values that have occurred since the given value. lastindex refers to the index number in the array of event timestamps, and since refers to the timestamps themselves. Effex also maintains an individual lastindex for each watch which is updated on each notification. If you do not specify since or lastindex, the values returned use that and return only what hasn't yet been delivered to a .on callback.
 
 #### getWatchLog ( watchableid , accessKey  [,params]) 
 
@@ -1106,6 +1079,10 @@ which produces this kind of response.  The qualifying log events are in the valu
 ### state
 
 This kind of subscription, would seem to introduce some *state* into the API process, but in fact the API itself is stateless. There is a separate server which manages notifications. The API simply registers details about interest in notifications as items in the back end cache. The push server watches for changes in data items and for those that want to know about them and handles all the connections with the push subscribers, so the push server itself is subscribed to the back end cache. This means that other APIS which were able to access the same database, would not need to implement their own push notification.
+
+### time synchronization
+
+The reference time for events is that of the API server. Browser times are likely to be a little out of sync with each other so be aware of this when working with push notifications. 
 
 ## Contributing and environment
 
