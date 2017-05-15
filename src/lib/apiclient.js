@@ -642,6 +642,18 @@ var api = (function(ns) {
 
   /**
    * @param {string} id the item id
+   * @param {string} updater the access key id
+   * @param {string} intent the intent id
+   * @param {object} params the params 
+   * @return {Promise} to the result
+   */
+  ns.release = function(id, updater , intent, params) {
+    params = params || {};
+    return ax.delete(`/release/${id}/${updater}/${intent}${makeParams(params)}`);
+  };
+  
+  /**
+   * @param {string} id the item id
    * @param {string} writer the writer key
    * @param {object} params the params 
    * @return {Promise} to the result
@@ -662,7 +674,8 @@ var api = (function(ns) {
     params = params || {};
     reader = reader || keys.reader;
     return ax.get(`/reader/${reader}/${encodeURIComponent(id)}${makeParams(params)}`);
-  };
+  }
+  
   
   /**
    * @param {string} id the item id
