@@ -615,6 +615,33 @@ size:196
 ```
 The response to an update attempt that is prevented from completing by an outstanding intention will contain a error message, and code of 423 along with an intentExpires value, which will indicate the number of seconds from when the request was made until the current lock expires.
 
+### release (id , intent)
+
+The intent parameter should be the intention key returned by the initial read request. The id should be the id or alias against which it was taken out. This delete request removes an intent. Updating with an intent does this anyway, and in any case the intent will expire after a while. However, if you take out an intent, and then decide not to follow up with an update, explicitly releasing the intent instead of allowing it to time out will allow others to get to the item more quickly
+
+example
+```
+efx.release ("dx1f7-m12-167ibfev9bfh", "uxk-f1m-b17ce9uo_t9b", "ixk-ms9f6-yp5t1154c9fb")
+.then (function (response) {
+  // do something  with response.data
+});
+
+```
+translates to native api url (DELETE)
+```
+https://ephex-auth.appspot-preview.com/release/dx1f7-m12-167ibfev9bfh/uxk-f1m-b17ce9uo_t9b/ixk-ms9f6-yp5t1154c9fb
+```
+example response. 
+```
+{ ok: true,
+  key: 'ixk-ms9f6-yp5t1154c9fb',
+  validtill: '2017-05-10T12:45:36.804Z',
+  type: 'intent',
+  plan: 'x',
+  accountId: '1f9',
+  code: 204 }
+```
+
 ### exponentional backoff
 
 The Node/JavaScript client has a general exponential backoff built in which is not specific to the Ephemeral Exchange API. In other words, you can use it with other APIS too. It can be used with Effex API automatically by setting the backoff parameter true, in order to avoid races between multiple clients making an intention read as in the example below.
