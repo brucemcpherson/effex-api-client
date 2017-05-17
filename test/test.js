@@ -20,6 +20,7 @@ var onOptions = {
 var bossKey = dev ? "bx1f9-zb1hg-44ov1bj19f92" : "bx2ao-1zj-bf300lgaod2q"; //dev
 efx.setEnv (dev ? 'dev' : 'prod');
 
+
 var keyTime = 30 * 60; //   30 minutes
 var waitABit = 1000; // wait for some time before checking of watches worked
 
@@ -149,6 +150,7 @@ function tests() {
     it('ping', function() {
 
       return efx.ping().then(function(result) {
+        console.log(result);
         expect(result.data).to.be.an('object');
         expect(result.data.value).to.equal('PONG');
         expect(result.data.code).to.equal(200);
@@ -349,22 +351,6 @@ function tests() {
         })
         .then(function(result) {
           expect(textData).to.deep.equal(result.data.value);
-        });
-    });
-
-    it('provoke annother update', function() {
-      return Promise.all([promises.keys, promises.writeWatched,promises.iu,promises.provokeUpdate])
-        .then(function(res) {
-          var keys = res[0];
-          var data = res[1].data;
-          // just read with a writer key
-          return promises.provokeAnotherUpdate = efx.update(textData, data.id, keys.updater);
-        })
-        .then(function(result) {
-          console.log("iu shoud fire again");
-          expect(true).to.equal(result.data.ok);
-          expect(201).to.equal(result.data.code);
-
         });
     });
 

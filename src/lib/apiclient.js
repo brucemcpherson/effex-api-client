@@ -512,7 +512,7 @@ var api = (function(ns) {
       .then((res) => {
 
         // add extra message if its needed
-        //console.log("back from connecting", sting.connection.socket.id, sting.connection.pushId);
+          console.log("back from connecting", sting.connection.socket.id, sting.connection.pushId);
 
         // now we can look out for things happening - the trigger is the watch.id
         sting.connection.socket.on(watchableId, function(data, sall) {

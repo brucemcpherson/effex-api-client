@@ -14,7 +14,7 @@ module.exports = function(configEnv) {
   ns.connection = {
     socket: null
   };
-
+console.log (configEnv);
   // the config change
   ns.setConfig = function(con) {
     // get rid of prev connect
@@ -83,9 +83,10 @@ module.exports = function(configEnv) {
     
     // handle connection event from socket.io
     function connectionEvent() {
-
+      
       return new Promise((resolve, reject) => {
         // deal with the connection event
+        console.log ('handling connection event');
         socket.on('connect', () => resolve());
       });
 
@@ -95,7 +96,7 @@ module.exports = function(configEnv) {
     function passEvent() {
 
       return new Promise((resolve, reject) => {
-
+console.log ('handling passevent');
         // the payload to send over
         var pack = {
           pass: config.socketPass,
@@ -109,6 +110,7 @@ module.exports = function(configEnv) {
         });
         
         // try the conversation
+        console.log ('try talking');
         socket.emit('pass', pack, (result)=> resolve(result));
         
       });
