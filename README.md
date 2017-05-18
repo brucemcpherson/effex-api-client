@@ -33,9 +33,6 @@ var efx = EffexApiClient;
 ## To check you have connectivity
 
 ```
-// set up client 
-efx.setBase("https://ephex-auth.appspot-preview.com");
-
 efx.ping().then(function(result)  {
   console.log( result.data );
 });
@@ -85,12 +82,8 @@ For convenience this node/JavaScript client is available, and of course you can 
 
 ## Initialization 
 
-Once you've included either with a package manager or a script tag: 
-```
+Include either with a package manager or a script tag: 
 
-// set up client 
-efx.setBase("https://ephex-auth.appspot-preview.com");
-```
 
 ## Responses
 Unless its a transport error, http responses will always be 200. If there is a structural error in your call, or for example, data is missing - this will be reported in the response. 
@@ -172,7 +165,7 @@ Here is a list of the parameters that the API understands and where they can be 
 Sets the API base url. Note that this is likely to change or be removed as the service moves from beta. It's unlikely you would need to use this anyway, as it already defaults to the production API. 
 
 ```
-efx.setBase("https://ephex-auth.appspot-preview.com");
+efx.setBase("https://ephex-auth.appspot.com");
 ```
 ### ping ()
 
