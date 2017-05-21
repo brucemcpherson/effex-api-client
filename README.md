@@ -937,30 +937,37 @@ You can choose which events to listen for from one or more of this list. Events 
 
 The event object varies slightly depending on the type of watch subscribed to, but here is an example of what will be passed to the subscription callback.
 ```
-{ id: 'dx1f9-skvue9-jee1fb14fjlm',
-  alias: 'aliaspush',
-  value: [ 1493219138996 ],
-  watchable: 'sx-lbdv5le-1164qg9ef8eb',
+{ created: 1495367395543,
+  id: 'dx1f9-izm1f9-36g16b1mfela',
   event: 'update',
-  message: { updater: 'uxk-yrmf1l-b19fle0ipede' },
-  pushId: '1g71belcnh6s',
-  nextevent: 1493219138997,
-  lastindex: 1,
-  type: 'push' }
+  options: 
+   { type: 'push',
+     frequency: 30,
+     start: 1495367395543,
+     method: 'POST',
+     message: { updater: 'uxk-bndzf1j-b195lfjr66pg' },
+     uq: 'uf1bgldf9iu',
+     pushid: 'o51bgldf7mu' },
+  nextevent: 1495367396649,
+  timeoffset: -135.769,
+  value: [ 1495367396648 ] }
 ```
-Here's a brief summary of that these things are
+Here's a brief summary of what some of these things are
 - id - The id of the item that has been updated, removed or expired.
+- created - when the subscription was created
 - alias - If an alias is being watched (rather than a specific id), it'll be here
 - value - An array of timestamps when the event occurred, starting just after the last time an event was reported. Typically there will be just one, but you can request a longer history, or if you are doing a pull subscription, several events may have occured between pollings.
-- watchable - the .watchable key which can be used with the .off method
+- type - of notification
+- frequency - only relevant for pull notifications - how often to poll for changes
+- uq - an internal tracking id to link to the specific .on event
+- timeoffset - there are a number of different servers involved in push notifications, and their internal clocks may be a little out of synch with each other. The api server is considered the master for time. This shows the difference in the internal clocks and the network delay between the push server and the api server. It is supplied for information only, and you do not need to do anything with this as all times have already been adjusted to compensate.
 - event - the type of event
 - pushId - a unique id for the session that initiated the subscription
 - message - an optional message of any custom data you set up with the .on method
 - nextevent - is used by the push server to note the next timestamp that will generate a push event. 
-- lastindex - the index number of the timestamp of the last item sent. This is used in preference to the nextevent if its there.
-- type - the type of event management being used
 
-The nextevent and lastindex are typically internal to the push server, but they may be of interest for debugging. Note that the contents of the item are not returned, just notification that there was an event, along with the id (and maybe also the alias) of the item. To be able to read the item (or update it), the watching process will need a key authorized to do so. There are multiple ways to do this. 
+
+The nextevent are typically internal to the push server, but they may be of interest for debugging. Note that the contents of the item are not returned, just notification that there was an event, along with the id (and maybe also the alias) of the item. To be able to read the item (or update it), the watching process will need a key authorized to do so. There are multiple ways to do this. 
 
 - If the process watching is the same one as the one that created the watch in the first place, then it will probably already have a suitable key available.
 - If a different process is being poked (probably with a url type watch), it may not have a suitable access key. In this case you may want to use the message option to send one over.
@@ -1119,11 +1126,11 @@ All backend components run in Docker Debian containers, so are easily transporta
 
 Server - Node - App Engine
 
-Push server - Node - Compute Engine
+Push server - Node - App Engine , Firebase
 
 Database - Redis - Compute engine
 
-Console app - React, Redux
+Console app - React, Redux , Firebase
 
 
 
