@@ -1132,6 +1132,8 @@ Database - Redis - Compute engine
 
 Console app - React, Redux , Firebase
 
+Diagrams here
+https://docs.google.com/presentation/d/1yGL2EHlwysdomtBzU_ha8C6_1SSeQo85nmHs23PUvtU/edit?usp=sharing
 
 
 ## More stuff
