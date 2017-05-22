@@ -10,14 +10,15 @@ var api = (function(ns) {
    */
   var axios = require('axios');
   var config = require('./config.js');
-  var Socketing = require('./socketing');
-
-
+  var fb = require ("./firebase");
+  fb.setBase ("push");
+  
   // the api base url
   let ax;
   let admin;
   let apiEnv;
   let sting;
+
   
   // expose an instance for custom use by to the client
   // since we have it anyway
@@ -382,23 +383,44 @@ var api = (function(ns) {
       try {
 
         switch (watch.options.type) {
+          
           case 'push':
-            // if we dont have it lready, bring it in
-            if (!sting) {
-              sting = new Socketing(apiEnv);
-            }
-
-            // get connected, and set a socket on for this uq.
-            createPushConnection_(watch.options.uq, watch.callback)
-              .then(() => {
-                return ns.onRegister(id, key, event, watch.options, params);
+            // no need to sign in, but leave this, as might change sometime
+            fb.in()
+              .then ((uid)=>{
+                // make a watch entry
+                return ns.onRegister(id, key, event, watch.options, params);             
               })
+                // add to the list of watchings
               .then((result) => {
+                // fb doesnt allow $
+                var fbKey = result.data.watchable.replace ("$","___");
+                fb.setOn (fbKey + "/" + watch.options.uq, (value) => {
+                  
+                  // for security, the public firebase db only contains  a watchable key, and the values that provoked it
+                  // so i need to get that watch item
+                  ns.getWatchable ( result.data.watchable , key )
+                  .then ((w)=> {
+                    if (!w.data.ok) {
+                      throw JSON.stringify (w.data);
+                    }
+                    else {
+                      var p = w.data.value;
+                      // fb doesnt like arrays, so we've stingified it
+                      p.value = JSON.parse(value);
+                      callback(result.data.watchable, p);
+                    }
+                  });
+                  
+                });
                 watch.watchable = result.data.watchable;
                 ns.watching[watch.watchable] = watch;
                 resolve(watch);
               })
-              .catch((err) => reject(err));
+              .catch ((err)=> {
+                reject (err);
+              });
+
             break;
 
           case 'url':
@@ -434,6 +456,8 @@ var api = (function(ns) {
     });
 
   };
+
+
 
   /**
    * does a timed looper
@@ -628,6 +652,19 @@ var api = (function(ns) {
     return ax.delete(`/offregister/${watchable}${makeParams(params)}`);
   };
 
+
+
+  /**
+   * @param {string} id the watchble id
+   * @param {string} key the key to use
+   * @param {object} params any params
+   * @return {Promise} to the result
+   */
+  ns.getWatchable = function(id, key,  params) {
+    params = params || {};
+    return ax.get(`/watchable/${id}/${key}${makeParams(params)}`);
+  };
+  
   /**
    * @param {string} id the watchble id
    * @param {string} key the key to use

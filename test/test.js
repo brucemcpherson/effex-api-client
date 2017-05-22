@@ -18,7 +18,7 @@ var onOptions = {
 // set up client 
 
 var bossKey = dev ? "bx1f9-zb1hg-44ov1bj19f92" : "bx2ao-1zj-bf300lgaod2q"; //dev
-efx.setEnv (dev ? 'dev' : 'prod');
+efx.setEnv ('dev');
 
 
 var keyTime = 30 * 60; //   30 minutes
