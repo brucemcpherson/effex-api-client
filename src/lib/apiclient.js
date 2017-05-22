@@ -40,7 +40,7 @@ var api = (function(ns) {
 
     // set up axios to api version
     ax = axios.create({
-      baseURL: apiEnv.base + ":" + apiEnv.basePort
+      baseURL: apiEnv.base + (apiEnv.basePort ? ( ":" + apiEnv.basePort) : "")
     });
 
     return ns;
