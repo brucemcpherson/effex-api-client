@@ -10,20 +10,20 @@ var api = (function(ns) {
    */
   var axios = require('axios');
   var config = require('./config.js');
-  var fb = require ("./firebase");
-  fb.setBase ("push");
-  
+  var fb = require("./firebase");
+  fb.setBase("push");
+
   // the api base url
   let ax;
   let admin;
   let apiEnv;
   let sting;
 
-  
+
   // expose an instance for custom use by to the client
   // since we have it anyway
   ns.ax = axios.create();
-  
+
   /**
    * select environment
    * @param {string} env (dev/prod)
@@ -40,7 +40,7 @@ var api = (function(ns) {
 
     // set up axios to api version
     ax = axios.create({
-      baseURL: apiEnv.base + (apiEnv.basePort ? ( ":" + apiEnv.basePort) : "")
+      baseURL: apiEnv.base + (apiEnv.basePort ? (":" + apiEnv.basePort) : "")
     });
 
     return ns;
@@ -54,37 +54,37 @@ var api = (function(ns) {
    * @param {string} source where to look
    * @param {string} name the param to look for
    */
-  ns.getUriParam = function (name, source) {
-    if (typeof window === typeof undefined ) return null;
+  ns.getUriParam = function(name, source) {
+    if (typeof window === typeof undefined) return null;
 
-    source = source ||  (window.location && window.location.search) || "";
+    source = source || (window.location && window.location.search) || "";
     var match = source && RegExp('[?&]' + name + '=([^&]*)').exec(source);
     return source && match && decodeURIComponent(match[1].replace(/\+/g, ' '));
   };
-  
+
   /**
    * standard parameters that might useful for an effex app
    * @return {object} keys
    */
   ns.getUriKeys = function() {
-    var ob = ["updater", "reader", "item","boss","writer","alias","id"]
+    var ob = ["updater", "reader", "item", "boss", "writer", "alias", "id"]
       .reduce(function(p, c) {
         p[c] = ns.getUriParam(c);
         return p;
       }, {});
-      
-      // updaters/writers can standin for readers
-      ob.updater = ob.updater || ob.writer;
-      ob.reader = ob.reader || ob.updater || ob.writer;
 
-      return ob;
+    // updaters/writers can standin for readers
+    ob.updater = ob.updater || ob.writer;
+    ob.reader = ob.reader || ob.updater || ob.writer;
+
+    return ob;
   };
-  
-    
+
+
   // if there are any params in the uri, we'll set them up as defaults
   let keys = ns.getUriKeys() || {};
-  
-  
+
+
   // generate a unique number for the session id
   let session = Math.round(Math.random() * 2048).toString(32) + new Date().getTime().toString(32);
   let pushId = session;
@@ -114,20 +114,16 @@ var api = (function(ns) {
   /**
    * @param {string} [base] the base url
    * @param {string} [adminKey] not required for regular client use as its for accout management with a console app
-   * @param {string} [sockBase] socket base for push operations
-   * @param {string} [sockPort] socket port for push operations
    * @return {object} self
    */
-  ns.setBase = function(base, adminKey, sockBase, sockPort) {
+  ns.setBase = function(base, adminKey) {
 
-    apiEnv.socketPort = sockPort || apiEnv.socketPort;
-    apiEnv.socketBase = sockBase || apiEnv.socketBase;
     apiEnv.base = base || apiEnv.base;
 
     // if its changed
     if (base) {
       ax = axios.create({
-        baseURL: base + ":" + apiEnv.basePort
+        baseURL: base + (apiEnv.basePort ? (":" + apiEnv.basePort) : "")
       });
     }
 
@@ -383,42 +379,43 @@ var api = (function(ns) {
       try {
 
         switch (watch.options.type) {
-          
+
           case 'push':
             // no need to sign in, but leave this, as might change sometime
             fb.in()
-              .then ((uid)=>{
+              .then((uid) => {
                 // make a watch entry
-                return ns.onRegister(id, key, event, watch.options, params);             
+                return ns.onRegister(id, key, event, watch.options, params);
               })
-                // add to the list of watchings
+              // add to the list of watchings
               .then((result) => {
                 // fb doesnt allow $
-                var fbKey = result.data.watchable.replace ("$","___");
-                fb.setOn (fbKey + "/" + watch.options.uq, (value) => {
-                  
+                var fbKey = result.data.watchable.replace("$", "___");
+                fb.setOn(fbKey + "/" + watch.options.uq, (value) => {
+
                   // for security, the public firebase db only contains  a watchable key, and the values that provoked it
                   // so i need to get that watch item
-                  ns.getWatchable ( result.data.watchable , key )
-                  .then ((w)=> {
-                    if (!w.data.ok) {
-                      throw JSON.stringify (w.data);
-                    }
-                    else {
-                      var p = w.data.value;
-                      // fb doesnt like arrays, so we've stingified it
-                      p.value = JSON.parse(value);
-                      callback(result.data.watchable, p);
-                    }
-                  });
-                  
+                  ns.getWatchable(result.data.watchable, key)
+                    .then((w) => {
+                      if (!w.data.ok) {
+                        throw JSON.stringify(w.data);
+                      }
+                      else {
+                        var p = w.data.value;
+                        // fb doesnt like arrays, so we've stingified it
+                        p.value = JSON.parse(value);
+                        callback(result.data.watchable, p);
+                      }
+                    });
                 });
+                
+                
                 watch.watchable = result.data.watchable;
                 ns.watching[watch.watchable] = watch;
                 resolve(watch);
               })
-              .catch ((err)=> {
-                reject (err);
+              .catch((err) => {
+                reject(err);
               });
 
             break;
@@ -474,7 +471,7 @@ var api = (function(ns) {
     if (!params.since) {
       params.since = watch.options.start;
     }
-    
+
     // because push notifications can ask the server the time now
     if (params.since < 0) params.since = 0;
     // this is  recursive
@@ -493,13 +490,13 @@ var api = (function(ns) {
           }
           // if since is -1, then we were asking the server for the time
           if (params.since === -1) params.since = pack.now;
-          
+
           // if we got some events, do the callback and update for the next one.
           if (pack.values.length && !watch.stopped) {
-            
+
             // for next loop
-            params.since = pack.values[pack.values.length-1]+1;
-            
+            params.since = pack.values[pack.values.length - 1] + 1;
+
             watch.callback(watch.watchable, {
               id: pack.id,
               alias: pack.alias,
@@ -509,12 +506,12 @@ var api = (function(ns) {
               key: key,
               value: pack.values,
               watchable: watch.watchable,
-              nextevent:params.since
+              nextevent: params.since
             });
 
 
           }
-          
+
           // cycle for the next
           ns.handyTimer(watch.options.frequency * 1000, watch.watchable).then(p);
         });
@@ -525,31 +522,6 @@ var api = (function(ns) {
     return p();
   }
 
-  /**
-   * create a connection
-   * for push otification
-   */
-  function createPushConnection_(watchableId, callback) {
-
-    // if we dont have a connection, make one
-    return sting.getConnected(pushId)
-      .then((res) => {
-
-        // add extra message if its needed
-          console.log("back from connecting", sting.connection.socket.id, sting.connection.pushId);
-
-        // now we can look out for things happening - the trigger is the watch.id
-        sting.connection.socket.on(watchableId, function(data, sall) {
-          // let it know we received it
-          sall('copythat');
-          // call the user function
-          callback(watchableId, data);
-        });
-
-        return res;
-
-      });
-  }
 
   /**
    * set any watch parameters
@@ -660,11 +632,11 @@ var api = (function(ns) {
    * @param {object} params any params
    * @return {Promise} to the result
    */
-  ns.getWatchable = function(id, key,  params) {
+  ns.getWatchable = function(id, key, params) {
     params = params || {};
     return ax.get(`/watchable/${id}/${key}${makeParams(params)}`);
   };
-  
+
   /**
    * @param {string} id the watchble id
    * @param {string} key the key to use
@@ -684,11 +656,11 @@ var api = (function(ns) {
    * @param {object} params the params 
    * @return {Promise} to the result
    */
-  ns.release = function(id, updater , intent, params) {
+  ns.release = function(id, updater, intent, params) {
     params = params || {};
     return ax.delete(`/release/${id}/${updater}/${intent}${makeParams(params)}`);
   };
-  
+
   /**
    * @param {string} id the item id
    * @param {string} writer the writer key
@@ -707,36 +679,36 @@ var api = (function(ns) {
    * @param {object} params the params 
    * @return {Promise} to the result
    */
-  function read_ (id, reader, params) {
+  function read_(id, reader, params) {
     params = params || {};
     reader = reader || keys.reader;
     return ax.get(`/reader/${reader}/${encodeURIComponent(id)}${makeParams(params)}`);
   }
-  
-  
+
+
   /**
    * @param {string} id the item id
    * @param {string} reader the reader key
    * @param {object} params the params 
    * @return {Promise} to the result
    */
-  ns.read = function (id, reader, params) {
+  ns.read = function(id, reader, params) {
     params = params || {};
-    
+
     // we'll use backoff in case there's an intent that needs looking at
     return ns.expBackoff(
-      
+
       // read an item and decalre an intention to update
       () => read_(id, reader, params),
-      
+
       // function for checking if we want to do a retry, because we got a lock 
       (lastResult) => params.backoff && lastResult.data.code === 423, {
-      
+
         // we have a custom wait time to leverage info about lock lifetime
         setWaitTime: (waitTime, passes, result, proposed) => {
           return Math.min(proposed, ((result && result.data && result.data.intentExpires) || 0) * 1000);
         }
-        
+
       });
   };
 
@@ -764,7 +736,7 @@ var api = (function(ns) {
     });
   };
 
-  
+
   /**
    * @param {string} accountId the account id
    * @return {Promise} to the result
@@ -816,11 +788,13 @@ var api = (function(ns) {
    * @param {string[]} preview what to look for
    * @param {bool} whether keys are all there
    */
-  ns.checkKeys = function (preview) {
+  ns.checkKeys = function(preview) {
     if (!Array.isArray(preview)) preview = [preview];
-    return preview.every(function(d){ return keys[d]});
+    return preview.every(function(d) {
+      return keys[d]
+    });
   };
-  
+
   ns.registerAlias = function(writer, key, id, alias, params) {
     return ax.get(`/${writer}/${key}/alias/${encodeURIComponent(alias)}/${id}${makeParams(params)}`);
   };
@@ -925,15 +899,15 @@ var api = (function(ns) {
 
 
     // this is the default waittime
-    function defaultWaitTime (waitTime, passes, result) {
+    function defaultWaitTime(waitTime, passes, result) {
       return Math.pow(2, passes) * waitTime + Math.round(Math.random() * 73);
     }
 
     // default calculation can be bypassed with a custom function
-    var setWaitTime =  function(waitTime, passes, result ,proposed) {
-      return options.setWaitTime ? options.setWaitTime (waitTime, passes, result,proposed) : 0;
+    var setWaitTime = function(waitTime, passes, result, proposed) {
+      return options.setWaitTime ? options.setWaitTime(waitTime, passes, result, proposed) : 0;
     };
-    
+
     // the defaults
     var waitTime = options.waitTime || 500;
     var passes = options.passes || 0;
@@ -973,8 +947,8 @@ var api = (function(ns) {
               if (doRetry(lastResult, passes++)) {
                 return ns.handyTimer(expTime)
                   .then(function() {
-                    var proposedWaitTime = defaultWaitTime(waitTime , passes , result );
-                    worker(setWaitTime(waitTime, passes, lastResult,proposedWaitTime) || proposedWaitTime);
+                    var proposedWaitTime = defaultWaitTime(waitTime, passes, result);
+                    worker(setWaitTime(waitTime, passes, lastResult, proposedWaitTime) || proposedWaitTime);
                   });
               }
               else {
