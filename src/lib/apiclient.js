@@ -10,19 +10,43 @@ var api = (function(ns) {
    */
   var axios = require('axios');
   var config = require('./config.js');
-  var fb = require("./firebase");
-  fb.setBase("push");
+
 
   // the api base url
   let ax;
   let admin;
   let apiEnv;
-  let sting;
-
+  let fb;
 
   // expose an instance for custom use by to the client
   // since we have it anyway
   ns.ax = axios.create();
+
+  /**
+   * @param {string} [base] the base url
+   * @param {string} [adminKey] not required for regular client use as its for accout management with a console app
+   * @return {object} self
+   */
+  ns.setBase = function(base, adminKey) {
+
+    apiEnv.base = base || apiEnv.base;
+
+    // if its changed
+    if (apiEnv.base) {
+      var bu = apiEnv.base + (apiEnv.basePort ? (":" + apiEnv.basePort) : "");
+      ax = axios.create({
+        baseURL: bu
+      });
+    }
+
+    admin = adminKey || admin;
+
+    return ns;
+  };
+  
+  ns.getBase = function () {
+    return ax.defaults.baseURL;
+  };
 
   /**
    * select environment
@@ -39,9 +63,7 @@ var api = (function(ns) {
     apiEnv = JSON.parse(JSON.stringify(config[en]));
 
     // set up axios to api version
-    ax = axios.create({
-      baseURL: apiEnv.base + (apiEnv.basePort ? (":" + apiEnv.basePort) : "")
-    });
+    ns.setBase ();
 
     return ns;
   };
@@ -111,26 +133,6 @@ var api = (function(ns) {
   };
 
 
-  /**
-   * @param {string} [base] the base url
-   * @param {string} [adminKey] not required for regular client use as its for accout management with a console app
-   * @return {object} self
-   */
-  ns.setBase = function(base, adminKey) {
-
-    apiEnv.base = base || apiEnv.base;
-
-    // if its changed
-    if (base) {
-      ax = axios.create({
-        baseURL: base + (apiEnv.basePort ? (":" + apiEnv.basePort) : "")
-      });
-    }
-
-    admin = adminKey;
-
-    return ns;
-  };
 
 
   /**
@@ -381,7 +383,15 @@ var api = (function(ns) {
         switch (watch.options.type) {
 
           case 'push':
-            // no need to sign in, but leave this, as might change sometime
+            
+            // initialize firebase if necessary
+            if (!fb) {
+              fb = require("./fb");
+              fb.init();
+              fb.setBase("push");
+            }
+            
+            // actually no need to login, but may change for a different db later
             fb.in()
               .then((uid) => {
                 // make a watch entry

@@ -1,18 +1,29 @@
 module.exports = ((ns) => {
 
-    const firebase = require("firebase");
-    var config = require("./config.js")["firebase-config"];
-    firebase.initializeApp(config);
 
-    // set up structs
-    ns.auth = firebase.auth();
-    ns.db = firebase.database();
+    let firebase, config, fapp ;
+    
     ns.base = "/";
     ns.uid = ""; // /push is public - no sign in required - contains no useful info
-    ns.baseRef = ns.db.ref(ns.base);
 
+    /**
+     *  only initialize if using
+     */
+    ns.init = () => {
+        firebase = require("firebase");
+        config = require("./config.js")["firebase-config"];
+        fapp = firebase.initializeApp(config,'efxapi-push');
+        // set up structs
+        //ns.auth = firebase.auth();
+        ns.db = fapp.database();
+        ns.baseRef = ns.db.ref(ns.base);
+        
+    };
+    
     // no need to sign in
-    ns.in = () => Promise.resolve(ns.uid);
+    ns.in = () => {
+        return ns.db ? Promise.resolve(ns.uid) : Promise.reject ('first initialize firebase');
+    };
     
     // set the base
     ns.setBase = (base) => {

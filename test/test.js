@@ -1,6 +1,6 @@
 var expect = require('chai').expect;
 var efx = require('../dist/index');
-var dev= false;
+var dev= true;
 var onOptions = {
     push: {
       type: "push"
@@ -18,8 +18,8 @@ var onOptions = {
 // set up client 
 
 var bossKey = dev ? "bx1f9-zb1hg-44ov1bj19f92" : "bx2be-xxl5ej-kn0ewbbf21di"; //dev
-efx.setEnv ('prod');
-
+efx.setEnv ('debug');
+console.log ('using ' + efx.getBase());
 
 var keyTime = 30 * 60; //   30 minutes
 var waitABit = 1000; // wait for some time before checking of watches worked
@@ -150,7 +150,6 @@ function tests() {
     it('ping', function() {
 
       return efx.ping().then(function(result) {
-        console.log(result);
         expect(result.data).to.be.an('object');
         expect(result.data.value).to.equal('PONG');
         expect(result.data.code).to.equal(200);
@@ -285,6 +284,50 @@ function tests() {
         })
         .then(function(result) {
           expect(textData).to.equal(result.data.value);
+        });
+    });
+
+    var bigone = new Array(10000).join('xxxxxxxxxxxxxxx').split('');
+    var biggerOne = [bigone, bigone];
+    
+    it('write biggerone - should exceed quota', function() {
+
+      return promises.keys
+        .then(function(keys) {
+          return  efx.write(biggerOne);
+        })
+        .then(function(result) {
+          console.log(result.data);
+          var data = result.data;
+          expect(data.ok).to.equal(false);
+          expect(data.code).to.equal(400);
+        });
+    });
+    
+    it('write bigone - should be ok', function() {
+
+      return promises.keys
+        .then(function(keys) {
+          return promises.writeBig = efx.write(bigone);
+        })
+        .then(function(result) {
+          console.log(result.data);
+          var data = result.data;
+          expect(data.ok).to.equal(true);
+          expect(data.code).to.equal(201);
+        });
+    });
+
+    it('read bigone', function() {
+      return Promise.all([promises.keys, promises.writeBig])
+        .then(function(res) {
+          var keys = res[0];
+          var data = res[1].data;
+          // just read with a writer key
+          return efx.read(data.id, keys.writer);
+        })
+        .then(function(result) {
+          expect(JSON.stringify(result.data.value)).to.equal(JSON.stringify(bigone));
         });
     });
 
