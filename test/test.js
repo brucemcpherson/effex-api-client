@@ -1,6 +1,6 @@
 var expect = require('chai').expect;
 var efx = require('../dist/index');
-var dev= true;
+var dev= false;
 var onOptions = {
     push: {
       type: "push"
@@ -18,7 +18,7 @@ var onOptions = {
 // set up client 
 
 var bossKey = dev ? "bx1f9-zb1hg-44ov1bj19f92" : "bx2be-xxl5ej-kn0ewbbf21di"; //dev
-efx.setEnv ('debug');
+efx.setEnv ('prod');
 console.log ('using ' + efx.getBase());
 
 var keyTime = 30 * 60; //   30 minutes

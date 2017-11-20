@@ -1,4 +1,7 @@
 # effex-api-client
+# this repo has been deprecated
+# see https://github.com/brucemcpherson/efx-fb-api-client for serverless version
+
 Node/JavaScript api client for Ephemeral exchange
 
 A cross platform cache, with a simple HTTP REST API that supports CORS
